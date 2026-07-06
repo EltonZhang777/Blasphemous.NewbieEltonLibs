@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net35;net6.0</TargetFrameworks>
+		<TargetFrameworks>net35</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
 
@@ -20,5 +20,12 @@
 	  <PackageReference Include="Blasphemous.ModdingAPI" Version="3.0.1" />
 	  <PackageReference Include="Blasphemous.CheatConsole" Version="1.1.0" />
 	</ItemGroup>
+
+  <Target Name="Development" AfterTargets="Build">
+    <PropertyGroup>
+      <PublishFolder>$(MSBuildProjectDirectory)\..\publish\</PublishFolder>
+    </PropertyGroup>
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PublishFolder)" />
+  </Target>
 
 </Project>
