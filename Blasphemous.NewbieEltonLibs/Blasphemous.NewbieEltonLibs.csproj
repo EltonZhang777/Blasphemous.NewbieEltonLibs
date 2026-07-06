@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>net35;net6.0</TargetFrameworks>
+		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
+
+		<Title>Newbie Elton Libraries</Title>
+		<Authors>NewbieElton</Authors>
+		<Description>Library of useful APIs for modding the game Blasphemous 1</Description>
+		<Version>0.1.0</Version>
+
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<RepositoryUrl>https://github.com/EltonZhang777/Blasphemous.NewbieEltonLibs</RepositoryUrl>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="Blasphemous.GameLibs" Version="4.0.67" />
+	  <PackageReference Include="Blasphemous.ModdingAPI" Version="3.0.1" />
+	</ItemGroup>
+
+</Project>
