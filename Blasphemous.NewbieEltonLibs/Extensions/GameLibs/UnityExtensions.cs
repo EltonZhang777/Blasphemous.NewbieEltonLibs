@@ -43,7 +43,7 @@ public static class UnityExtensions
     /// <summary>
     /// Starts a coroutine safely, returning null if the MonoBehaviour is not active in the hierarchy
     /// </summary>
-    public static Coroutine StartCoroutineSafe(this MonoBehaviour mb, IEnumerator routine)
+    public static Coroutine? StartCoroutineSafe(this MonoBehaviour mb, IEnumerator routine)
     {
         if (!mb.gameObject.activeInHierarchy)
             return null;
@@ -54,7 +54,7 @@ public static class UnityExtensions
     /// <summary>
     /// Tries to start a coroutine and returns whether it was successfully started
     /// </summary>
-    public static bool TryStartCoroutine(this MonoBehaviour mb, IEnumerator routine, out Coroutine coroutine)
+    public static bool TryStartCoroutine(this MonoBehaviour mb, IEnumerator routine, out Coroutine? coroutine)
     {
         coroutine = mb.StartCoroutineSafe(routine);
         return coroutine != null;
