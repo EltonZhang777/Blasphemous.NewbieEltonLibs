@@ -10,7 +10,7 @@ public static class I2Extensions
     /// <summary>
     /// Gets the secondary translated object from a Localize instance, updating the main and secondary translation references
     /// </summary>
-    public static T DoGetSecondaryTranslatedObj<T>(
+    public static T? DoGetSecondaryTranslatedObj<T>(
         this Localize localize,
         ref string mainTranslation,
         ref string secondaryTranslation) where T : UObject
@@ -18,7 +18,7 @@ public static class I2Extensions
         string text;
         string text2;
         localize.DoDeserializeTranslation(mainTranslation, out text, out text2);
-        T t = (T)(object)null;
+        T? t = null;
         if (!string.IsNullOrEmpty(text2))
         {
             t = localize.DoGetObject<T>(text2);
@@ -61,15 +61,15 @@ public static class I2Extensions
     /// <summary>
     /// Gets the translated object of the specified type by the given translation string
     /// </summary>
-    public static T DoGetObject<T>(
+    public static T? DoGetObject<T>(
         this Localize localize,
         string Translation) where T : UObject
     {
         if (string.IsNullOrEmpty(Translation))
         {
-            return (T)(object)null;
+            return default;
         }
-        T translatedObject = localize.DoGetTranslatedObject<T>(Translation);
+        T? translatedObject = localize.DoGetTranslatedObject<T>(Translation);
         if (translatedObject == null)
         {
             translatedObject = localize.DoGetTranslatedObject<T>(Translation);
@@ -80,7 +80,7 @@ public static class I2Extensions
     /// <summary>
     /// Finds the translated object of the specified type by the given translation string
     /// </summary>
-    public static T DoGetTranslatedObject<T>(
+    public static T? DoGetTranslatedObject<T>(
         this Localize localize,
         string Translation) where T : UObject
     {

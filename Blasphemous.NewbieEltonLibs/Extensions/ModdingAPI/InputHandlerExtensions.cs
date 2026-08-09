@@ -25,7 +25,7 @@ public static class InputHandlerExtensions
     /// </summary>
     public static Dictionary<string, KeyCode> GetAllKeybindings(this InputHandler inputHandler)
     {
-        return TraverseUtils.GetValue<Dictionary<string, KeyCode>>(inputHandler, "_keybindings");
+        return TraverseUtils.GetValue<Dictionary<string, KeyCode>>(inputHandler, "_keybindings")!;
     }
 
     /// <summary>

@@ -48,7 +48,7 @@ public static class InventoryManagerExtensions
     /// <summary>
     /// Gets all inventory objects of a specific type
     /// </summary>
-    public static List<T> GetAllInventoryObjectsOfType<T>(this InventoryManager inventoryManager) where T : BaseInventoryObject
+    public static List<T>? GetAllInventoryObjectsOfType<T>(this InventoryManager inventoryManager) where T : BaseInventoryObject
     {
         switch (typeof(T))
         {
@@ -71,7 +71,7 @@ public static class InventoryManagerExtensions
     /// <summary>
     /// Gets all inventory objects of a specific item type
     /// </summary>
-    public static List<BaseInventoryObject> GetAllInventoryObjectsOfType(this InventoryManager inventoryManager, ItemType itemType)
+    public static List<BaseInventoryObject>? GetAllInventoryObjectsOfType(this InventoryManager inventoryManager, ItemType itemType)
     {
         switch (itemType)
         {
@@ -94,7 +94,7 @@ public static class InventoryManagerExtensions
     /// <summary>
     /// Gets all owned inventory objects of a specific type
     /// </summary>
-    public static List<T> GetOwnedInventoryObjectsOfType<T>(this InventoryManager inventoryManager) where T : BaseInventoryObject
+    public static List<T>? GetOwnedInventoryObjectsOfType<T>(this InventoryManager inventoryManager) where T : BaseInventoryObject
     {
         switch (typeof(T))
         {
@@ -117,7 +117,7 @@ public static class InventoryManagerExtensions
     /// <summary>
     /// Gets all owned inventory objects of a specific item type
     /// </summary>
-    public static List<BaseInventoryObject> GetOwnedInventoryObjectsOfType(this InventoryManager inventoryManager, ItemType itemType)
+    public static List<BaseInventoryObject>? GetOwnedInventoryObjectsOfType(this InventoryManager inventoryManager, ItemType itemType)
     {
         switch (itemType)
         {
@@ -143,7 +143,7 @@ public static class InventoryManagerExtensions
     /// <param name="inventoryManager">The inventory manager instance</param>
     /// <param name="id">The inventory item id (e.g. RB301, PR12)</param>
     /// <param name="throwError">Whether to throw an exception if the item type is unknown</param>
-    public static BaseInventoryObject GetInventoryItemFromId(this InventoryManager inventoryManager, string id, bool throwError = false)
+    public static BaseInventoryObject? GetInventoryItemFromId(this InventoryManager inventoryManager, string id, bool throwError = false)
     {
         id = id.Trim();
         ItemType itemType = inventoryManager.GetItemTypeFromId(id);
@@ -178,7 +178,7 @@ public static class InventoryManagerExtensions
     /// <param name="id">The inventory item id</param>
     /// <param name="inventoryObject">The found inventory object, or null</param>
     /// <returns>True if the item was found, false otherwise</returns>
-    public static bool TryGetInventoryItemFromId(this InventoryManager inventoryManager, string id, out BaseInventoryObject inventoryObject)
+    public static bool TryGetInventoryItemFromId(this InventoryManager inventoryManager, string id, out BaseInventoryObject? inventoryObject)
     {
         inventoryObject = null;
         try
