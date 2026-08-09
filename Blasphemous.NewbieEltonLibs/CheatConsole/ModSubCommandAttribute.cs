@@ -22,9 +22,9 @@ public sealed class ModSubCommandAttribute : Attribute
 
     /// <summary>
     /// Usage placeholder shown in the auto-generated help (e.g. <c>[patchName]</c>).
-    /// Defaults to <see cref="Name"/> when null.
+    /// Null falls back to <see cref="Name"/>.
     /// </summary>
-    public string Usage { get; }
+    public string? Usage { get; }
 
     /// <summary>
     /// Allowed parameter counts for automatic validation. Empty (default) disables validation.

@@ -15,7 +15,7 @@ namespace Blasphemous.NewbieEltonLibs.CheatConsole;
 /// </summary>
 public abstract class AutoModCommand : ModCommand
 {
-    private List<SubCommandInfo> subCommandInfos;
+    private List<SubCommandInfo> subCommandInfos = null!;
 
     /// <summary>
     /// Whether to keep uppercase letters in sub-command names. Defaults to <c>true</c>
@@ -98,7 +98,7 @@ public abstract class AutoModCommand : ModCommand
     /// </summary>
     protected virtual Dictionary<string, Action<string[]>> AddCustomSubCommands()
     {
-        return null;
+        return new Dictionary<string, Action<string[]>>();
     }
 
     /// <summary>
