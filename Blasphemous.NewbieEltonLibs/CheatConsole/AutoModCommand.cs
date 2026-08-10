@@ -53,7 +53,7 @@ public abstract class AutoModCommand : ModCommand
                     throw new InvalidOperationException($"Duplicate sub-command '{name}' on '{GetType().FullName}'");
 
                 commands.Add(name, WrapValidation(action, attribute.ValidLengths));
-                infos.Add(new SubCommandInfo(name, attribute.Usage ?? name, attribute.Description));
+                infos.Add(new SubCommandInfo(name, attribute.Usage, attribute.Description));
             }
         }
 
@@ -61,7 +61,7 @@ public abstract class AutoModCommand : ModCommand
         if (!commands.ContainsKey("help"))
         {
             commands.Add("help", WrapValidation(SubCommand_Help, [0]));
-            infos.Add(new SubCommandInfo("help", "help", "show available sub-commands"));
+            infos.Add(new SubCommandInfo("help", null, "show available sub-commands"));
         }
 
         // 3. merge hand-written sub-commands (may override help)
@@ -98,7 +98,7 @@ public abstract class AutoModCommand : ModCommand
     /// </summary>
     protected virtual Dictionary<string, Action<string[]>> AddCustomSubCommands()
     {
-        return new Dictionary<string, Action<string[]>>();
+        return [];
     }
 
     /// <summary>
@@ -110,7 +110,10 @@ public abstract class AutoModCommand : ModCommand
         Write($"Available {CommandName} commands:");
         foreach (SubCommandInfo info in subCommandInfos)
         {
-            Write($"{CommandName} {info.Usage} : {info.Description}");
+            string line = (info.Usage == null || info.Usage == info.Name)
+                ? $"{info.Name}"
+                : $"{info.Name} {info.Usage}";
+            Write($"{CommandName} {line} : {info.Description}");
         }
     }
 
@@ -152,10 +155,10 @@ public abstract class AutoModCommand : ModCommand
     private sealed class SubCommandInfo
     {
         public string Name;
-        public string Usage;
+        public string? Usage;
         public string Description;
 
-        public SubCommandInfo(string name, string usage, string description)
+        public SubCommandInfo(string name, string? usage, string description)
         {
             Name = name;
             Usage = usage;
