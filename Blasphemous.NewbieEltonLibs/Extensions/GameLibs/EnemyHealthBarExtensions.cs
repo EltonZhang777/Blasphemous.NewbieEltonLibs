@@ -13,7 +13,7 @@ public static class EnemyHealthBarExtensions
     /// </summary>
     public static Enemy GetOwner(this EnemyHealthBar bar)
     {
-        return TraverseUtils.GetValue<Enemy>(bar, "Owner");
+        return TraverseUtils.GetValue<Enemy>(bar, "Owner")!;
     }
 
     /// <summary>
@@ -21,7 +21,7 @@ public static class EnemyHealthBarExtensions
     /// </summary>
     public static Entity GetTarget(this BossHealth bossHealth)
     {
-        return TraverseUtils.GetValue<Entity>(bossHealth, "target");
+        return TraverseUtils.GetValue<Entity>(bossHealth, "target")!;
     }
 
     /// <summary>
@@ -29,6 +29,6 @@ public static class EnemyHealthBarExtensions
     /// </summary>
     public static BossHealth GetBossHealth(this UIController UiController)
     {
-        return TraverseUtils.GetValue<BossHealth>(UiController, "bossHealth");
+        return TraverseUtils.GetValue<BossHealth>(UiController, "bossHealth")!;
     }
 }

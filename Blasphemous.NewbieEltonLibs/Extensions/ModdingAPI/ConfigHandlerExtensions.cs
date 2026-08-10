@@ -17,7 +17,7 @@ public static class ConfigHandlerExtensions
     /// <summary>
     /// Load config while specifying <see cref="JsonSerializerSettings"/>
     /// </summary>
-    public static T Load<T>(this ConfigHandler configHandler, JsonSerializerSettings settings = null) where T : new()
+    public static T Load<T>(this ConfigHandler configHandler, JsonSerializerSettings? settings = null) where T : new()
     {
         FileHandler fileHandler = configHandler.GetMod().FileHandler;
         string configPath = fileHandler.GetConfigPath();
@@ -29,13 +29,13 @@ public static class ConfigHandlerExtensions
             return val;
         }
 
-        return JsonConvert.DeserializeObject<T>(text, settings);
+        return JsonConvert.DeserializeObject<T>(text, settings) ?? new();
     }
 
     /// <summary>
     /// Save config while specifying <see cref="JsonSerializerSettings"/>
     /// </summary>
-    public static void Save<T>(this ConfigHandler configHandler, T config, Formatting formatting = Formatting.Indented, JsonSerializerSettings settings = null)
+    public static void Save<T>(this ConfigHandler configHandler, T config, Formatting formatting = Formatting.Indented, JsonSerializerSettings? settings = null)
     {
         FileHandler fileHandler = configHandler.GetMod().FileHandler;
         string configPath = fileHandler.GetConfigPath();

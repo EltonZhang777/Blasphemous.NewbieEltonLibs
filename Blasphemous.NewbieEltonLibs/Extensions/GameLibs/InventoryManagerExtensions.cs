@@ -48,22 +48,22 @@ public static class InventoryManagerExtensions
     /// <summary>
     /// Gets all inventory objects of a specific type
     /// </summary>
-    public static List<T> GetAllInventoryObjectsOfType<T>(this InventoryManager inventoryManager) where T : BaseInventoryObject
+    public static List<T>? GetAllInventoryObjectsOfType<T>(this InventoryManager inventoryManager) where T : BaseInventoryObject
     {
         switch (typeof(T))
         {
             case Type t when t == typeof(Relic):
-                return inventoryManager.GetAllRelics().Select(x => x as T).ToList();
+                return inventoryManager.GetAllRelics().OfType<T>().ToList();
             case Type t when t == typeof(RosaryBead):
-                return inventoryManager.GetAllRosaryBeads().Select(x => x as T).ToList();
+                return inventoryManager.GetAllRosaryBeads().OfType<T>().ToList();
             case Type t when t == typeof(QuestItem):
-                return inventoryManager.GetAllQuestItems().Select(x => x as T).ToList();
+                return inventoryManager.GetAllQuestItems().OfType<T>().ToList();
             case Type t when t == typeof(Prayer):
-                return inventoryManager.GetAllPrayers().Select(x => x as T).ToList();
+                return inventoryManager.GetAllPrayers().OfType<T>().ToList();
             case Type t when t == typeof(BlasCollectibleItem):
-                return inventoryManager.GetAllCollectibleItems().Select(x => x as T).ToList();
+                return inventoryManager.GetAllCollectibleItems().OfType<T>().ToList();
             case Type t when t == typeof(Sword):
-                return inventoryManager.GetAllSwords().Select(x => x as T).ToList();
+                return inventoryManager.GetAllSwords().OfType<T>().ToList();
         }
         return null;
     }
@@ -71,7 +71,7 @@ public static class InventoryManagerExtensions
     /// <summary>
     /// Gets all inventory objects of a specific item type
     /// </summary>
-    public static List<BaseInventoryObject> GetAllInventoryObjectsOfType(this InventoryManager inventoryManager, ItemType itemType)
+    public static List<BaseInventoryObject>? GetAllInventoryObjectsOfType(this InventoryManager inventoryManager, ItemType itemType)
     {
         switch (itemType)
         {
@@ -94,22 +94,22 @@ public static class InventoryManagerExtensions
     /// <summary>
     /// Gets all owned inventory objects of a specific type
     /// </summary>
-    public static List<T> GetOwnedInventoryObjectsOfType<T>(this InventoryManager inventoryManager) where T : BaseInventoryObject
+    public static List<T>? GetOwnedInventoryObjectsOfType<T>(this InventoryManager inventoryManager) where T : BaseInventoryObject
     {
         switch (typeof(T))
         {
             case Type t when t == typeof(Relic):
-                return inventoryManager.GetRelicsOwned().Select(x => x as T).ToList();
+                return inventoryManager.GetRelicsOwned().OfType<T>().ToList();
             case Type t when t == typeof(RosaryBead):
-                return inventoryManager.GetRosaryBeadOwned().Select(x => x as T).ToList();
+                return inventoryManager.GetRosaryBeadOwned().OfType<T>().ToList();
             case Type t when t == typeof(QuestItem):
-                return inventoryManager.GetQuestItemOwned().Select(x => x as T).ToList();
+                return inventoryManager.GetQuestItemOwned().OfType<T>().ToList();
             case Type t when t == typeof(Prayer):
-                return inventoryManager.GetPrayersOwned().Select(x => x as T).ToList();
+                return inventoryManager.GetPrayersOwned().OfType<T>().ToList();
             case Type t when t == typeof(BlasCollectibleItem):
-                return inventoryManager.GetCollectibleItemOwned().Select(x => x as T).ToList();
+                return inventoryManager.GetCollectibleItemOwned().OfType<T>().ToList();
             case Type t when t == typeof(Sword):
-                return inventoryManager.GetSwordsOwned().Select(x => x as T).ToList();
+                return inventoryManager.GetSwordsOwned().OfType<T>().ToList();
         }
         return null;
     }
@@ -117,7 +117,7 @@ public static class InventoryManagerExtensions
     /// <summary>
     /// Gets all owned inventory objects of a specific item type
     /// </summary>
-    public static List<BaseInventoryObject> GetOwnedInventoryObjectsOfType(this InventoryManager inventoryManager, ItemType itemType)
+    public static List<BaseInventoryObject>? GetOwnedInventoryObjectsOfType(this InventoryManager inventoryManager, ItemType itemType)
     {
         switch (itemType)
         {
@@ -143,7 +143,7 @@ public static class InventoryManagerExtensions
     /// <param name="inventoryManager">The inventory manager instance</param>
     /// <param name="id">The inventory item id (e.g. RB301, PR12)</param>
     /// <param name="throwError">Whether to throw an exception if the item type is unknown</param>
-    public static BaseInventoryObject GetInventoryItemFromId(this InventoryManager inventoryManager, string id, bool throwError = false)
+    public static BaseInventoryObject? GetInventoryItemFromId(this InventoryManager inventoryManager, string id, bool throwError = false)
     {
         id = id.Trim();
         ItemType itemType = inventoryManager.GetItemTypeFromId(id);
@@ -178,14 +178,14 @@ public static class InventoryManagerExtensions
     /// <param name="id">The inventory item id</param>
     /// <param name="inventoryObject">The found inventory object, or null</param>
     /// <returns>True if the item was found, false otherwise</returns>
-    public static bool TryGetInventoryItemFromId(this InventoryManager inventoryManager, string id, out BaseInventoryObject inventoryObject)
+    public static bool TryGetInventoryItemFromId(this InventoryManager inventoryManager, string id, out BaseInventoryObject? inventoryObject)
     {
         inventoryObject = null;
         try
         {
             inventoryObject = inventoryManager.GetInventoryItemFromId(id, true);
         }
-        catch (KeyNotFoundException e)
+        catch (KeyNotFoundException)
         {
             return false;
         }
@@ -253,7 +253,7 @@ public static class InventoryManagerExtensions
         {
             itemType = inventoryManager.GetItemTypeFromId(id, true);
         }
-        catch (KeyNotFoundException e)
+        catch (KeyNotFoundException)
         {
             return false;
         }

@@ -8,7 +8,7 @@
 		<Title>Newbie Elton Libraries</Title>
 		<Authors>NewbieElton</Authors>
 		<Description>Library of useful APIs for modding the game Blasphemous 1</Description>
-		<Version>0.1.0</Version>
+		<Version>0.2.0</Version>
 
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>

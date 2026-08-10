@@ -24,7 +24,7 @@ public static class TraverseUtils
     /// <summary>
     /// Get value from a field/property of a traverse instance, regardless of accessibility levels
     /// </summary>
-    public static TValue GetValue<TValue>(Traverse traverse, string variableName, TraverseAccessType accessType = TraverseAccessType.Field)
+    public static TValue? GetValue<TValue>(Traverse traverse, string variableName, TraverseAccessType accessType = TraverseAccessType.Field)
     {
         if (traverse == null)
         {
@@ -43,7 +43,7 @@ public static class TraverseUtils
     /// <summary>
     /// Traverse and get value of a variable, regardless of accessibility levels
     /// </summary>
-    public static TValue GetValue<TValue>(object obj, string variableName, TraverseAccessType accessType = TraverseAccessType.Field)
+    public static TValue? GetValue<TValue>(object obj, string variableName, TraverseAccessType accessType = TraverseAccessType.Field)
     {
         Traverse traverse = Traverse.Create(obj);
         if (traverse == null)

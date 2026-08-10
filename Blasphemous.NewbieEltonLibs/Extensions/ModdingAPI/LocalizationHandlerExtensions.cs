@@ -22,9 +22,9 @@ public static class LocalizationHandlerExtensions
         string key,
         string languageName)
     {
-        Dictionary<string, Dictionary<string, string>> _textByLanguage = TraverseUtils.GetValue<Dictionary<string, Dictionary<string, string>>>(localizationHandler, "_textByLanguage", TraverseUtils.TraverseAccessType.Field);
-        string _defaultLanguage = TraverseUtils.GetValue<string>(localizationHandler, "_defaultLanguage", TraverseUtils.TraverseAccessType.Field);
-        BlasMod _mod = TraverseUtils.GetValue<BlasMod>(localizationHandler, "_mod", TraverseUtils.TraverseAccessType.Field);
+        Dictionary<string, Dictionary<string, string>> _textByLanguage = TraverseUtils.GetValue<Dictionary<string, Dictionary<string, string>>>(localizationHandler, "_textByLanguage", TraverseUtils.TraverseAccessType.Field)!;
+        string _defaultLanguage = TraverseUtils.GetValue<string>(localizationHandler, "_defaultLanguage", TraverseUtils.TraverseAccessType.Field)!;
+        BlasMod _mod = TraverseUtils.GetValue<BlasMod>(localizationHandler, "_mod", TraverseUtils.TraverseAccessType.Field)!;
 
         // get langauge code by language name
         int languageIndex = I2LocManager.Sources[0].GetLanguageIndex(languageName);

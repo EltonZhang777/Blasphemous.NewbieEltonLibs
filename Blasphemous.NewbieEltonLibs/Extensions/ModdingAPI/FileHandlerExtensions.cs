@@ -54,21 +54,21 @@ public static class FileHandlerExtensions
     /// </summary>
     public static T LoadDataAsJson<T>(this FileHandler fileHandler, string fileName, JsonSerializerSettings settings)
     {
-        if (!fileHandler.ReadFileContents(Path.Combine(fileHandler.GetDataPath(), fileName), out string output))
+        if (!fileHandler.ReadFileContents(Path.Combine(fileHandler.GetDataPath(), fileName), out string? output))
         {
             throw new ArgumentException($"Failed to load {fileName} to JSON of type {typeof(T)}!");
         }
-        return JsonConvert.DeserializeObject<T>(output, settings);
+        return JsonConvert.DeserializeObject<T>(output!, settings) ?? throw new ArgumentException($"Failed to load {fileName} to JSON of type {typeof(T)}!");
     }
 
     /// <summary>
     /// Tries to load a JSON file from the content folder
     /// </summary>
-    public static bool LoadContentAsJson<T>(this FileHandler fileHandler, string fileName, out T output)
+    public static bool LoadContentAsJson<T>(this FileHandler fileHandler, string fileName, out T? output)
     {
-        if (ReadFileContents(fileHandler, Path.Combine(fileHandler.ContentFolder, fileName), out string output2))
+        if (ReadFileContents(fileHandler, Path.Combine(fileHandler.ContentFolder, fileName), out string? output2))
         {
-            output = JsonConvert.DeserializeObject<T>(output2);
+            output = JsonConvert.DeserializeObject<T>(output2!);
             return true;
         }
 
@@ -89,7 +89,7 @@ public static class FileHandlerExtensions
     /// <summary>
     /// Writes a JSON object to a file in the content folder with custom formatting and serializer settings
     /// </summary>
-    public static void WriteJsonToContent(this FileHandler fileHandler, string fileName, object obj, JsonSerializerSettings settings = null, Formatting formatting = Formatting.Indented)
+    public static void WriteJsonToContent(this FileHandler fileHandler, string fileName, object obj, JsonSerializerSettings? settings = null, Formatting formatting = Formatting.Indented)
     {
         if (settings != null)
         {
@@ -118,7 +118,7 @@ public static class FileHandlerExtensions
         return assetBundle != null;
     }
 
-    private static bool ReadFileContents(this FileHandler fileHandler, string path, out string output)
+    private static bool ReadFileContents(this FileHandler fileHandler, string path, out string? output)
     {
         if (File.Exists(path))
         {
