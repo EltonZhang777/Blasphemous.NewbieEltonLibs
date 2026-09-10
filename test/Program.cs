@@ -1,11 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
+using BepInEx.Logging;
+using Blasphemous.ModdingAPI;
+using Blasphemous.ModdingAPI.Helpers;
 using Blasphemous.NewbieEltonLibs.Components;
 using Blasphemous.NewbieEltonLibs.Extensions.GameLibs;
+using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
 using Blasphemous.NewbieEltonLibs.Serialization;
 using Framework.FrameworkCore;
 using Newtonsoft.Json;
@@ -27,6 +34,7 @@ internal static class Program
             EntityOrientationConversionRejectsUnsupportedValues();
             UnityEngineIgnoreConverterIsUsableByExternalConsumers();
             JsonSerializerSettingsFactoryIsUsableByExternalConsumers();
+            ModLogExtensionsPreserveExternalConsumerOwnership();
             return 0;
         }
         catch (Exception exception)
@@ -200,6 +208,102 @@ internal static class Program
         Assert(JsonSerializerSettingsFactory.CreateInventoryComparisonSettings().ReferenceLoopHandling == ReferenceLoopHandling.Ignore, "Comparison settings were shared.");
     }
 
+    private static void ModLogExtensionsPreserveExternalConsumerOwnership()
+    {
+        SmokeMod mod = CreateRegisteredSmokeMod();
+        ManualLogSource modLogger = FindLogSource(mod.Name);
+        List<LogEventArgs> modEvents = new();
+        EventHandler<LogEventArgs> modHandler = (_, logEvent) => modEvents.Add(logEvent);
+        modLogger.LogEvent += modHandler;
+
+        try
+        {
+            NestedConsumerComponent.EmitParameterlessLogs();
+            NestedConsumerComponent.EmitExplicitLogs(mod);
+
+            bool isDebugBuild = ((DebuggableAttribute?)Attribute.GetCustomAttribute(
+                Assembly.GetExecutingAssembly(), typeof(DebuggableAttribute)))?.IsJITOptimizerDisabled == true;
+            if (isDebugBuild)
+            {
+                AssertLog(modEvents, "parameterless info", LogLevel.Message, mod.Name);
+                AssertLog(modEvents, "parameterless warn", LogLevel.Warning, mod.Name);
+                AssertLog(modEvents, "parameterless error", LogLevel.Error, mod.Name);
+                AssertLog(modEvents, "parameterless fatal", LogLevel.Fatal, mod.Name);
+                AssertLog(modEvents, "parameterless debug", LogLevel.Info, mod.Name);
+                AssertLog(modEvents, "parameterless display", LogLevel.Message, mod.Name);
+                AssertLog(modEvents, "explicit info", LogLevel.Message, mod.Name);
+                AssertLog(modEvents, "explicit warn", LogLevel.Warning, mod.Name);
+                AssertLog(modEvents, "explicit error", LogLevel.Error, mod.Name);
+                AssertLog(modEvents, "explicit fatal", LogLevel.Fatal, mod.Name);
+                AssertLog(modEvents, "explicit debug", LogLevel.Info, mod.Name);
+                AssertLog(modEvents, "explicit display", LogLevel.Message, mod.Name);
+            }
+            else
+            {
+                Assert(modEvents.Count == 0, "Release builds emitted debug logs.");
+            }
+
+            ICollection<BlasMod> loadedMods = (ICollection<BlasMod>)ModHelper.LoadedMods;
+            loadedMods.Clear();
+
+            ManualLogSource unknownLogger = FindLogSource("Unknown mod");
+            List<LogEventArgs> unknownEvents = new();
+            EventHandler<LogEventArgs> unknownHandler = (_, logEvent) => unknownEvents.Add(logEvent);
+            unknownLogger.LogEvent += unknownHandler;
+            try
+            {
+                NestedConsumerComponent.EmitUnregisteredLog();
+                if (isDebugBuild)
+                    AssertLog(unknownEvents, "unregistered", LogLevel.Message, "Unknown mod");
+                else
+                    Assert(unknownEvents.Count == 0, "Release builds emitted an unregistered debug log.");
+            }
+            finally
+            {
+                unknownLogger.LogEvent -= unknownHandler;
+            }
+        }
+        finally
+        {
+            modLogger.LogEvent -= modHandler;
+        }
+    }
+
+    private static SmokeMod CreateRegisteredSmokeMod()
+    {
+        SmokeMod mod = (SmokeMod)RuntimeHelpers.GetUninitializedObject(typeof(SmokeMod));
+
+        // The real constructor invokes Harmony's native detour setup, which cannot run in this net8 harness.
+        typeof(BlasMod).GetField("<Name>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .SetValue(mod, "Newbie Elton smoke");
+
+        PropertyInfo loadedModsProperty = typeof(ModHelper).GetProperty(
+            "LoadedMods", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)!;
+        loadedModsProperty.GetSetMethod(true)!.Invoke(null, new object[] { new List<BlasMod> { mod } });
+
+        MethodInfo registerMethod = typeof(ModLog).GetMethod("Register", BindingFlags.Static | BindingFlags.NonPublic)!;
+        registerMethod.Invoke(null, new object[] { mod });
+        return mod;
+    }
+
+    private static ManualLogSource FindLogSource(string sourceName)
+    {
+        ManualLogSource? source = BepInEx.Logging.Logger.Sources.OfType<ManualLogSource>().FirstOrDefault(item => item.SourceName == sourceName);
+        return source ?? throw new InvalidOperationException("Log source was not registered: " + sourceName);
+    }
+
+    private static void AssertLog(IEnumerable<LogEventArgs> events, string message, LogLevel level, string sourceName)
+    {
+        string expectedMessage = "[DEBUG] " + message;
+        List<LogEventArgs> capturedEvents = events.ToList();
+        Assert(capturedEvents.Any(logEvent =>
+            logEvent.Level == level &&
+            logEvent.Source.SourceName == sourceName &&
+            Equals(logEvent.Data, expectedMessage)),
+            "Expected log was not attributed to " + sourceName + ": " + expectedMessage +
+            ". Captured: " + string.Join(" | ", capturedEvents.Select(logEvent => logEvent.ToString())));
+    }
+
     private class BaseItems : ItemCollection<string>
     {
         public string BaseItem = "base";
@@ -212,6 +316,41 @@ internal static class Program
         public int NotAnItem = 123;
         public object AlsoNotAnItem = new object();
         public string NullItem = null!;
+    }
+
+    private sealed class SmokeMod : BlasMod
+    {
+        public SmokeMod() : base("newbie-elton-smoke", "Newbie Elton smoke", "Smoke test", "1.0.0")
+        {
+        }
+    }
+
+    private static class NestedConsumerComponent
+    {
+        public static void EmitParameterlessLogs()
+        {
+            ModLogExtensions.InfoIfDebugBuild("parameterless info");
+            ModLogExtensions.WarnIfDebugBuild("parameterless warn");
+            ModLogExtensions.ErrorIfDebugBuild("parameterless error");
+            ModLogExtensions.FatalIfDebugBuild("parameterless fatal");
+            ModLogExtensions.DebugIfDebugBuild("parameterless debug");
+            ModLogExtensions.DisplayIfDebugBuild("parameterless display");
+        }
+
+        public static void EmitExplicitLogs(BlasMod mod)
+        {
+            ModLogExtensions.InfoIfDebugBuild("explicit info", mod);
+            ModLogExtensions.WarnIfDebugBuild("explicit warn", mod);
+            ModLogExtensions.ErrorIfDebugBuild("explicit error", mod);
+            ModLogExtensions.FatalIfDebugBuild("explicit fatal", mod);
+            ModLogExtensions.DebugIfDebugBuild("explicit debug", mod);
+            ModLogExtensions.DisplayIfDebugBuild("explicit display", mod);
+        }
+
+        public static void EmitUnregisteredLog()
+        {
+            ModLogExtensions.InfoIfDebugBuild("unregistered");
+        }
     }
 
     private static void Assert(bool condition, string message)
