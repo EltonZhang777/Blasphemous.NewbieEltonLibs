@@ -1,5 +1,4 @@
 using Blasphemous.ModdingAPI;
-using Gameplay.UI.Widgets;
 using HarmonyLib;
 using System;
 using System.Diagnostics;
@@ -41,15 +40,10 @@ public static class CheatConsoleLogging
     private const string InputPrefix = "[CheatConsole Input] ";
     private const string OutputPrefix = "[CheatConsole Output] ";
 
-    private static bool inputActive;
-    private static LogLevel inputLogLevel = LogLevel.Info;
-    private static bool inputDebugBuildOnly = true;
-    private static bool inputCallerIsDebugBuild;
+    private static readonly object SyncRoot = new object();
 
-    private static bool outputActive;
-    private static LogLevel outputLogLevel = LogLevel.Info;
-    private static bool outputDebugBuildOnly = true;
-    private static bool outputCallerIsDebugBuild;
+    private static readonly ConsoleLogChannel InputChannel = new ConsoleLogChannel();
+    private static readonly ConsoleLogChannel OutputChannel = new ConsoleLogChannel();
 
     private static bool patchApplied;
 
@@ -63,11 +57,8 @@ public static class CheatConsoleLogging
     public static void LogCheatConsoleInput(bool active, LogLevel logLevel = LogLevel.Info, bool debugBuildOnly = true)
     {
         ValidateLogLevel(logLevel);
-        inputActive = active;
-        inputLogLevel = logLevel;
-        inputDebugBuildOnly = debugBuildOnly;
-        inputCallerIsDebugBuild = IsAssemblyDebugBuild(Assembly.GetCallingAssembly());
-        EnsurePatched();
+        InputChannel.Configure(active, logLevel, debugBuildOnly, IsAssemblyDebugBuild(Assembly.GetCallingAssembly()));
+        TryEnsurePatched();
     }
 
     /// <summary>
@@ -80,26 +71,33 @@ public static class CheatConsoleLogging
     public static void LogCheatConsoleOutput(bool active, LogLevel logLevel = LogLevel.Info, bool debugBuildOnly = true)
     {
         ValidateLogLevel(logLevel);
-        outputActive = active;
-        outputLogLevel = logLevel;
-        outputDebugBuildOnly = debugBuildOnly;
-        outputCallerIsDebugBuild = IsAssemblyDebugBuild(Assembly.GetCallingAssembly());
-        EnsurePatched();
+        OutputChannel.Configure(active, logLevel, debugBuildOnly, IsAssemblyDebugBuild(Assembly.GetCallingAssembly()));
+        TryEnsurePatched();
     }
 
-    private static void EnsurePatched()
+    private static bool TryEnsurePatched()
     {
         if (patchApplied)
-            return;
+            return true;
 
-        try
+        lock (SyncRoot)
         {
-            new Harmony(HarmonyId).PatchAll(typeof(CheatConsoleLogging).Assembly);
-            patchApplied = true;
-        }
-        catch (Exception exception)
-        {
-            ModLog.Error($"Failed to install cheat-console logging patches: {exception}");
+            if (patchApplied)
+                return true;
+
+            try
+            {
+                Harmony harmony = new Harmony(HarmonyId);
+                harmony.PatchAll(typeof(ConsoleWidget_Submit_CheatConsoleInput_Patch));
+                harmony.PatchAll(typeof(ConsoleWidget_Write_CheatConsoleOutput_Patch));
+                patchApplied = true;
+                return true;
+            }
+            catch (Exception exception)
+            {
+                ModLog.Error($"Failed to install cheat-console logging patches: {exception}");
+                return false;
+            }
         }
     }
 
@@ -142,30 +140,28 @@ public static class CheatConsoleLogging
         }
     }
 
-    private static bool ShouldLog(bool active, bool debugBuildOnly, bool callerIsDebugBuild)
+    internal static void LogConfigured(
+        ConsoleLogChannel channel,
+        string prefix,
+        string message,
+        Action<LogLevel, object> log)
     {
-        return active && (!debugBuildOnly || callerIsDebugBuild);
+        if (channel.ShouldLog())
+            log(channel.LogLevel, prefix + message);
     }
 
-    [HarmonyPatch(typeof(ConsoleWidget), nameof(ConsoleWidget.ProcessCommand))]
-    private static class ProcessCommandPatch
+    internal static bool IsInputLoggingActive()
     {
-        [HarmonyPrefix]
-        private static void Prefix(string command)
-        {
-            if (ShouldLog(inputActive, inputDebugBuildOnly, inputCallerIsDebugBuild))
-                Log(inputLogLevel, InputPrefix + command);
-        }
+        return InputChannel.ShouldLog();
     }
 
-    [HarmonyPatch(typeof(ConsoleWidget), nameof(ConsoleWidget.Write))]
-    private static class WritePatch
+    internal static void LogInput(string command)
     {
-        [HarmonyPostfix]
-        private static void Postfix(string text)
-        {
-            if (ShouldLog(outputActive, outputDebugBuildOnly, outputCallerIsDebugBuild))
-                Log(outputLogLevel, OutputPrefix + text);
-        }
+        LogConfigured(InputChannel, InputPrefix, command, Log);
+    }
+
+    internal static void LogOutput(string text)
+    {
+        LogConfigured(OutputChannel, OutputPrefix, text, Log);
     }
 }
