@@ -11,9 +11,9 @@ namespace Blasphemous.NewbieEltonLibs.Extensions.GameLibs;
 /// <summary>
 /// Provides ownership-scoped access to boolean flags stored by the vanilla event system.
 /// </summary>
-public static class ModOwnedFlags
+public static class ModFlagsManager
 {
-    private static readonly ModOwnedFlagRegistry _registry = new();
+    private static readonly ModFlagRegistry _registry = new();
 
     /// <summary>
     /// Registers a local flag name for the uniquely loaded mod represented by <paramref name="modType"/>.
@@ -83,20 +83,20 @@ public static class ModOwnedFlags
         if (!TryResolveMod(modType, callingAssembly, out BlasMod? mod) || mod == null)
             return false;
 
-        if (!_registry.TryGet(mod.GetType(), mod.Id, localName, out ModOwnedFlagRegistration? registration) || registration == null)
+        if (!_registry.TryGet(mod.GetType(), mod.Id, localName, out ModFlagInfo? registration) || registration == null)
         {
             ModLog.Error($"Cannot read unregistered mod-owned flag '{localName}'.", mod);
             return false;
         }
 
-        if (!TryGetEvents(mod, "read", out EventManager? events) || events == null)
+        if (!TryGetVanillaEventManager(mod, "read", out EventManager? events) || events == null)
         {
             return false;
         }
 
         try
         {
-            return ModOwnedFlagAdapter.TryGet(events, registration.VanillaId, out value);
+            return ModFlagAdapter.TryGet(events, registration.VanillaId, out value);
         }
         catch (Exception exception)
         {
@@ -135,20 +135,20 @@ public static class ModOwnedFlags
         if (!TryResolveMod(modType, callingAssembly, out BlasMod? mod) || mod == null)
             return false;
 
-        if (!_registry.TryGet(mod.GetType(), mod.Id, localName, out ModOwnedFlagRegistration? registration) || registration == null)
+        if (!_registry.TryGet(mod.GetType(), mod.Id, localName, out ModFlagInfo? registration) || registration == null)
         {
             ModLog.Error($"Cannot write unregistered mod-owned flag '{localName}'.", mod);
             return false;
         }
 
-        if (!TryGetEvents(mod, "write", out EventManager? events) || events == null)
+        if (!TryGetVanillaEventManager(mod, "write", out EventManager? events) || events == null)
         {
             return false;
         }
 
         try
         {
-            return ModOwnedFlagAdapter.TrySet(events, registration.VanillaId, value, registration.PreserveInNewGamePlus);
+            return ModFlagAdapter.TrySet(events, registration.VanillaId, value, registration.PreserveInNewGamePlus);
         }
         catch (Exception exception)
         {
@@ -157,7 +157,7 @@ public static class ModOwnedFlags
         }
     }
 
-    private static bool TryGetEvents(BlasMod mod, string operation, out EventManager? events)
+    private static bool TryGetVanillaEventManager(BlasMod mod, string operation, out EventManager? events)
     {
         events = null;
         try

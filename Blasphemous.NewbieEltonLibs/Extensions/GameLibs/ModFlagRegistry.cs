@@ -3,17 +3,17 @@ using System.Collections.Generic;
 
 namespace Blasphemous.NewbieEltonLibs.Extensions.GameLibs;
 
-internal sealed class ModOwnedFlagRegistry
+internal sealed class ModFlagRegistry
 {
-    private readonly Dictionary<string, ModOwnedFlagRegistration> _registrations = new();
+    private readonly Dictionary<string, ModFlagInfo> _registrations = new();
 
-    internal bool TryRegister(Type modType, string modId, string localName, bool preserveInNewGamePlus, out ModOwnedFlagRegistration? registration)
+    internal bool TryRegister(Type modType, string modId, string localName, bool preserveInNewGamePlus, out ModFlagInfo? registration)
     {
         registration = null;
         if (!TryCreateVanillaId(modId, localName, out string vanillaId))
             return false;
 
-        if (_registrations.TryGetValue(vanillaId, out ModOwnedFlagRegistration existing))
+        if (_registrations.TryGetValue(vanillaId, out ModFlagInfo existing))
         {
             if (existing.ModType == modType && existing.ModId == modId && existing.PreserveInNewGamePlus == preserveInNewGamePlus)
             {
@@ -24,18 +24,18 @@ internal sealed class ModOwnedFlagRegistry
             return false;
         }
 
-        registration = new ModOwnedFlagRegistration(modType, modId, vanillaId, preserveInNewGamePlus);
+        registration = new ModFlagInfo(modType, modId, vanillaId, preserveInNewGamePlus);
         _registrations.Add(vanillaId, registration);
         return true;
     }
 
-    internal bool TryGet(Type modType, string modId, string localName, out ModOwnedFlagRegistration? registration)
+    internal bool TryGet(Type modType, string modId, string localName, out ModFlagInfo? registration)
     {
         registration = null;
         if (!TryCreateVanillaId(modId, localName, out string vanillaId))
             return false;
 
-        if (!_registrations.TryGetValue(vanillaId, out ModOwnedFlagRegistration candidate))
+        if (!_registrations.TryGetValue(vanillaId, out ModFlagInfo candidate))
             return false;
 
         if (candidate.ModType != modType || candidate.ModId != modId)
@@ -64,14 +64,14 @@ internal sealed class ModOwnedFlagRegistry
     }
 }
 
-internal sealed class ModOwnedFlagRegistration
+internal sealed class ModFlagInfo
 {
     internal Type ModType { get; }
     internal string ModId { get; }
     internal string VanillaId { get; }
     internal bool PreserveInNewGamePlus { get; }
 
-    internal ModOwnedFlagRegistration(Type modType, string modId, string vanillaId, bool preserveInNewGamePlus)
+    internal ModFlagInfo(Type modType, string modId, string vanillaId, bool preserveInNewGamePlus)
     {
         ModType = modType;
         ModId = modId;

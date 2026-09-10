@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Blasphemous.NewbieEltonLibs.Extensions.GameLibs;
 
-internal static class ModOwnedFlagAdapter
+internal static class ModFlagAdapter
 {
     internal static bool TryGet(EventManager events, string vanillaId, out bool value)
     {
