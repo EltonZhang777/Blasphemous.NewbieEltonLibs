@@ -50,7 +50,7 @@ public class AnimationImportInfo
             throw new ArgumentOutOfRangeException(nameof(height), "Frame height must be positive.");
         }
 
-        if (secondsPerFrame <= 0)
+        if (!(secondsPerFrame > 0))
         {
             throw new ArgumentOutOfRangeException(nameof(secondsPerFrame), "Frame duration must be positive.");
         }

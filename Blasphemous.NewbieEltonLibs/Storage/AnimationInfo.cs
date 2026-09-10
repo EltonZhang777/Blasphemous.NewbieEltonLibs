@@ -39,7 +39,7 @@ public class AnimationInfo
             throw new ArgumentException("An animation must contain at least one frame.", nameof(sprites));
         }
 
-        if (secondsPerFrame <= 0)
+        if (!(secondsPerFrame > 0))
         {
             throw new ArgumentOutOfRangeException(nameof(secondsPerFrame), "Frame duration must be positive.");
         }
