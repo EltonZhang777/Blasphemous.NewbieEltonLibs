@@ -15,6 +15,7 @@ internal static class Program
             VerifyPublicOwnershipContract();
             VerifyCallingAssemblyContract();
             VerifyVanillaAdapterContract();
+            VerifyLifecycleContract();
             Console.WriteLine("Flag API smoke test passed.");
             return 0;
         }
@@ -38,6 +39,7 @@ internal static class Program
 
         Assert(registry.TryRegister(ownerType, "Example.Mod", "flag name", false, out ModOwnedFlagRegistration? registration));
         Assert(registration != null && registration.VanillaId == "EXAMPLE.MOD:FLAG_NAME");
+        Assert(registration != null && !registration.PreserveInNewGamePlus);
         Assert(registry.TryRegister(ownerType, "Example.Mod", "FLAG_NAME", false, out _));
         Assert(!registry.TryRegister(ownerType, "Example.Mod", "flag name", true, out _));
         Assert(registry.TryGet(ownerType, "Example.Mod", "flag name", out _));
@@ -81,30 +83,66 @@ internal static class Program
 
     private static void VerifyVanillaAdapterContract()
     {
-        EventManager events = (EventManager)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(typeof(EventManager));
-        TraverseUtils.SetValue(ref events, "flags", new Dictionary<string, FlagObject>());
+        EventManager events = CreateEvents();
         Dictionary<string, FlagObject> flags = TraverseUtils.GetValue<Dictionary<string, FlagObject>>(events, "flags")!;
 
         Assert(!ModOwnedFlagAdapter.TryGet(events, "EXAMPLE.MOD:MISSING", out _));
-        FlagObject storedFalse = (FlagObject)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(typeof(FlagObject));
-        storedFalse.value = false;
+        FlagObject storedFalse = CreateFlag(false, false);
         flags["EXAMPLE.MOD:STORED_FALSE"] = storedFalse;
         Assert(ModOwnedFlagAdapter.TryGet(events, "EXAMPLE.MOD:STORED_FALSE", out bool storedValue));
         Assert(!storedValue);
 
-        FlagObject preserved = (FlagObject)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(typeof(FlagObject));
-        preserved.value = true;
-        preserved.preserveInNewGamePlus = true;
+        FlagObject preserved = CreateFlag(true, true);
         flags["EXAMPLE.MOD:PRESERVED"] = preserved;
         Assert(ModOwnedFlagAdapter.TryGet(events, "EXAMPLE.MOD:PRESERVED", out bool preservedValue));
         Assert(preservedValue && flags["EXAMPLE.MOD:PRESERVED"].preserveInNewGamePlus);
     }
 
+    private static void VerifyLifecycleContract()
+    {
+        ModOwnedFlagRegistry registry = new();
+        Assert(registry.TryRegister(typeof(OwnerMod), "Lifecycle.Mod", "slot flag", true, out ModOwnedFlagRegistration? registration));
+        Assert(registration != null && registration.PreserveInNewGamePlus);
+
+        EventManager events = CreateEvents();
+        Dictionary<string, FlagObject> flags = TraverseUtils.GetValue<Dictionary<string, FlagObject>>(events, "flags")!;
+        Assert(!ModOwnedFlagAdapter.TryGet(events, registration!.VanillaId, out _));
+
+        flags[registration.VanillaId] = CreateFlag(false, true);
+        Assert(ModOwnedFlagAdapter.TryGet(events, registration.VanillaId, out bool storedFalse));
+        Assert(!storedFalse);
+
+        Dictionary<string, FlagObject> restoredFlags = new();
+        restoredFlags[registration.VanillaId] = CreateFlag(true, true);
+        TraverseUtils.SetValue(ref events, "flags", restoredFlags);
+        Assert(registry.TryGet(typeof(OwnerMod), "Lifecycle.Mod", "slot flag", out _));
+        Assert(ModOwnedFlagAdapter.TryGet(events, registration.VanillaId, out bool restoredValue));
+        Assert(restoredValue);
+
+        restoredFlags[registration.VanillaId].value = false;
+        Assert(ModOwnedFlagAdapter.TryGet(events, registration.VanillaId, out bool resetValue));
+        Assert(!resetValue);
+    }
+
+    private static EventManager CreateEvents()
+    {
+        EventManager events = (EventManager)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(typeof(EventManager));
+        TraverseUtils.SetValue(ref events, "flags", new Dictionary<string, FlagObject>());
+        return events;
+    }
+
+    private static FlagObject CreateFlag(bool value, bool preserveInNewGamePlus)
+    {
+        FlagObject flag = (FlagObject)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(typeof(FlagObject));
+        flag.value = value;
+        flag.preserveInNewGamePlus = preserveInNewGamePlus;
+        return flag;
+    }
+
     private static TMod CreateUninitializedMod<TMod>(string id) where TMod : BlasMod
     {
         TMod mod = (TMod)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(typeof(TMod));
-        FieldInfo idField = typeof(BlasMod).GetField("<Id>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!;
-        idField.SetValue(mod, id);
+        TraverseUtils.SetValue(ref mod, "<Id>k__BackingField", id);
         return mod;
     }
 
