@@ -13,6 +13,7 @@ internal static class Program
         {
             VerifyRegistrationContract();
             VerifyPublicOwnershipContract();
+            VerifyCallingAssemblyContract();
             VerifyVanillaAdapterContract();
             Console.WriteLine("Flag API smoke test passed.");
             return 0;
@@ -55,6 +56,27 @@ internal static class Program
         Assert(!ModOwnedFlags.TrySetFlag("public", typeof(OtherMod), false));
         Assert(!ModOwnedFlags.TryGetFlag("public", typeof(OtherMod), out _));
         Assert(!ModOwnedFlags.TrySetFlag("EXAMPLE.MOD:PUBLIC", typeof(OwnerMod), false));
+    }
+
+    private static void VerifyCallingAssemblyContract()
+    {
+        OwnerMod owner = CreateUninitializedMod<OwnerMod>("Fallback.Mod");
+        OtherMod other = CreateUninitializedMod<OtherMod>("Other.Mod");
+
+        SetLoadedMods(owner, other);
+        Assert(ModOwnedFlags.RegisterFlag("explicit-precedence", typeof(OwnerMod)));
+
+        SetLoadedMods(owner);
+        Assert(ModOwnedFlags.RegisterFlag("fallback-single"));
+        Assert(ModOwnedFlags.RegisterFlag("fallback-single", typeof(OwnerMod)));
+
+        SetLoadedMods(owner, other);
+        Assert(!ModOwnedFlags.RegisterFlag("fallback-ambiguous"));
+
+        Type externalModType = typeof(BlasMod).Assembly.GetType("Blasphemous.ModdingAPI.ModdingAPI")!;
+        BlasMod externalMod = (BlasMod)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(externalModType);
+        SetLoadedMods(externalMod);
+        Assert(!ModOwnedFlags.RegisterFlag("fallback-no-match"));
     }
 
     private static void VerifyVanillaAdapterContract()
