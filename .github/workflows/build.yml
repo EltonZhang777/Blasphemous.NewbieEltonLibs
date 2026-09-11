@@ -24,6 +24,9 @@ jobs:
         dotnet restore
         dotnet build --configuration Release --no-restore
 
+    - name: Run Tests
+      run: dotnet test tests/Blasphemous.NewbieEltonLibs.Tests/Blasphemous.NewbieEltonLibs.Tests.csproj --configuration Release --no-restore
+
   # Release: only runs for version tags (v*). Creates a GitHub release
   # with the DLL and pushes the nupkg to nuget.org.
   release:
