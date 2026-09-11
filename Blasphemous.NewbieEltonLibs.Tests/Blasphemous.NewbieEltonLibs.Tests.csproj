@@ -1,7 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
+    <StartupObject>Blasphemous.NewbieEltonLibs.SmokeTest.Program</StartupObject>
     <IsTestProject>true</IsTestProject>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -12,7 +14,7 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.4.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.1" />
-    <ProjectReference Include="..\..\Blasphemous.NewbieEltonLibs\Blasphemous.NewbieEltonLibs.csproj" />
+    <ProjectReference Include="..\Blasphemous.NewbieEltonLibs\Blasphemous.NewbieEltonLibs.csproj" />
   </ItemGroup>
 
 </Project>

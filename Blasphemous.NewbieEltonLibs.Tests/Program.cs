@@ -10,6 +10,7 @@ using System.Threading;
 using BepInEx.Logging;
 using Blasphemous.ModdingAPI;
 using Blasphemous.ModdingAPI.Helpers;
+using Blasphemous.NewbieEltonLibs.Tests;
 using Blasphemous.NewbieEltonLibs.Components;
 using Blasphemous.NewbieEltonLibs.Extensions.GameLibs;
 using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
@@ -35,6 +36,7 @@ internal static class Program
             UnityEngineIgnoreConverterIsUsableByExternalConsumers();
             JsonSerializerSettingsFactoryIsUsableByExternalConsumers();
             ModLogExtensionsPreserveExternalConsumerOwnership();
+            FlagApiSmokeTests.Run();
             return 0;
         }
         catch (Exception exception)

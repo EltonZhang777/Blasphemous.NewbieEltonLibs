@@ -5,25 +5,18 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 
-internal static class Program
+namespace Blasphemous.NewbieEltonLibs.Tests;
+
+internal static class FlagApiSmokeTests
 {
-    private static int Main()
+    internal static void Run()
     {
-        try
-        {
-            VerifyRegistrationContract();
-            VerifyPublicOwnershipContract();
-            VerifyCallingAssemblyContract();
-            VerifyVanillaAdapterContract();
-            VerifyLifecycleContract();
-            Console.WriteLine("Flag API smoke test passed.");
-            return 0;
-        }
-        catch (Exception exception)
-        {
-            Console.Error.WriteLine(exception);
-            return 1;
-        }
+        VerifyRegistrationContract();
+        VerifyPublicOwnershipContract();
+        VerifyCallingAssemblyContract();
+        VerifyVanillaAdapterContract();
+        VerifyLifecycleContract();
+        Console.WriteLine("Flag API smoke test passed.");
     }
 
     private static void VerifyRegistrationContract()
