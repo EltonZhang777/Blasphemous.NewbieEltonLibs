@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
-    <StartupObject>Blasphemous.NewbieEltonLibs.SmokeTest.Program</StartupObject>
+    <StartupObject>Blasphemous.NewbieEltonLibs.Tests.Program</StartupObject>
     <IsTestProject>true</IsTestProject>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>

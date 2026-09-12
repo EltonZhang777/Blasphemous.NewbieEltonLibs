@@ -21,7 +21,7 @@ using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
-namespace Blasphemous.NewbieEltonLibs.SmokeTest;
+namespace Blasphemous.NewbieEltonLibs.Tests;
 
 internal static class Program
 {
