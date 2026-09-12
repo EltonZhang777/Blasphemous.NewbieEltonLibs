@@ -6,9 +6,13 @@ Mods currently have no shared safe API for persistent boolean flags. Direct use 
 
 ## Solution
 
-Add a registration-based API for mod-owned boolean flags. A mod registers a local name during initialization, and the library maps it to a vanilla flag ID prefixed with the owning mod ID. The vanilla event system remains the source of truth, preserving slot-save behavior and compatibility with original-game events.
+Add a registration-based API for mod-owned boolean flags. A mod registers a local name during initialization, and the library maps it to a vanilla flag ID prefixed with the owning mod ID. The full ID is formatted through the public `ModFlagsManager.FormatToFlagId` method, which mirrors the vanilla event system's ID formatting. The vanilla event system remains the source of truth, preserving slot-save behavior and compatibility with original-game events.
 
 The API uses standard `Try` semantics: an operation succeeds only when the caller is authorized and the underlying vanilla flag exists. An uninitialized registered flag therefore cannot be mistaken for a stored `false` value. Registration itself does not create or initialize a vanilla flag.
+
+## Traceability
+
+The numbered stories below are referenced as `SF-<number>` in the public API coverage specification. In particular, `SF-4` means the absent-versus-stored-`false` contract, `SF-10` means explicit concrete mod-type identity, and `SF-12` means fail-closed behavior for ambiguous or missing identity.
 
 ## User Stories
 
@@ -34,22 +38,26 @@ The API uses standard `Try` semantics: an operation succeeds only when the calle
 - Provide a small static safe flag API with registration, `TryGet`, and `TrySet` operations.
 - Registration accepts a local flag name, an optional `preserveInNewGamePlus` value defaulting to `false`, and an optional concrete mod `Type`.
 - Registration returns failure for conflicting duplicates and is idempotent for an identical registration.
-- Safe operations accept only local names and derive the vanilla ID as `<modId>:<localName>` before the game's own normalization.
+- Registration and lookup use the canonical vanilla ID: formatting-equivalent owner prefixes or local names identify the same flag. A same-owner, same-policy repeat is idempotent; a same-ID registration with a different owner type or NG+ policy fails.
+- `ModFlagsManager.FormatToFlagId(string)` is a public pure formatter for complete vanilla flag IDs. It throws `ArgumentNullException` for `null`, leaves an empty string empty, replaces only ASCII spaces with underscores, applies the vanilla `ToUpper()` behavior, and leaves other separators unchanged. It does not trim, validate, add an ownership prefix, or grant access.
+- Safe operations accept only local names and derive the vanilla ID as `<modId>:<localName>` before passing the complete ID through `FormatToFlagId`.
+- `TryCreateVanillaId` rejects null, empty, and all-whitespace mod IDs or local names before composing the complete ID and routing it through `FormatToFlagId`.
 - A concrete supplied `Type` takes precedence over calling-assembly inference and must exactly match one loaded `BlasMod` runtime type.
 - Without a supplied type, the calling assembly must resolve to exactly one loaded mod. Missing or ambiguous resolution fails closed.
 - Registration stores permission and ownership metadata only; it does not call `Core.Events.SetFlag`.
 - `TryGet` succeeds only when the flag is registered and exists in the current vanilla flag state. A stored `false` is returned as a successful operation with `value == false`; an absent flag returns failure.
 - `TrySet` succeeds only for a registered flag owned by the resolved mod and delegates storage to `Core.Events.SetFlag`, applying the registration's NG+ preservation policy.
+- `ModFlagAdapter` routes both dictionary reads and vanilla writes through `FormatToFlagId`; `ModFlagsManager` does not duplicate the conversion. `ModFlagInfo.ModId` retains the raw mod ID, while mod-owned flag ownership compares the owner prefix after `FormatToFlagId`; unrelated mod identity resolution and validation remain unchanged.
 - Unregistered access logs an error and returns failure. Registered-but-uninitialized reads return failure without treating the state as an error.
 - The existing public `Core.Events.GetFlag`/`SetFlag` APIs remain the low-level vanilla flag surface; this library does not add redundant forwarding methods.
 - ModdingAPI slot/global persistence is not extended to inject fields into arbitrary consuming-mod save classes. Such support would require an explicit cooperative protocol in each consuming mod and is out of scope.
 
 ## Testing Decisions
 
-- Tests should verify observable behavior: registration ownership, duplicate handling, ID prefixing, identity resolution, `TryGet` distinction between absent and stored `false`, `TrySet` authorization, and NG+ preservation forwarding.
+- Tests should verify observable behavior: formatter vectors and null behavior, registration ownership, duplicate handling, ID prefixing, identity resolution, `TryGet` distinction between absent and stored `false`, `TrySet` authorization, and NG+ preservation forwarding.
 - The highest useful seam is the pure registration/identity/name-resolution logic, separated from the thin `Core.Events` adapter.
 - The game adapter should be covered only by focused integration-style checks where the referenced game types are available; tests should not duplicate the game's own persistence implementation.
-- There is no existing test suite or test framework in the repository, so the first implementation should add only the smallest test seam needed for these behaviors.
+- Extend the existing smoke-test project and `FlagApiSmokeTests` style; do not add a test framework or a second test harness.
 
 ## Out of Scope
 
