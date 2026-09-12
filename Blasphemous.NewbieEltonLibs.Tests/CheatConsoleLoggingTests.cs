@@ -1,5 +1,6 @@
 using Gameplay.UI.Widgets;
 using Blasphemous.NewbieEltonLibs.CheatConsole;
+using Blasphemous.NewbieEltonLibs.HarmonyPatches;
 using System;
 using System.Collections.Generic;
 using System.Linq;
