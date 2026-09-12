@@ -59,9 +59,17 @@ if errorlevel 1 goto :failed
 dotnet format whitespace "%formatTarget%" --no-restore
 if errorlevel 1 goto :failed
 
-rem info-level style fixes can make MSBuildWorkspace try to change project document properties.
-dotnet format style "%formatTarget%" --no-restore --severity info
+rem First apply warning/error style fixes and import formatting.
+dotnet format style "%formatTarget%" --no-restore --severity warn
 if errorlevel 1 goto :failed
+
+rem Apply info-level fixes one diagnostic at a time to avoid an aggregate
+rem MSBuildWorkspace document-properties change.
+rem IDE0060 has no associated code fix and is intentionally omitted.
+for %%D in (IDE0018 IDE0028 IDE0039 IDE0041 IDE0044 IDE0062 IDE0066 IDE0090 IDE0130 IDE0270 IDE0290 IDE0300 IDE0301 IDE0305) do (
+    dotnet format style "%formatTarget%" --no-restore --severity info --diagnostics %%D
+    if errorlevel 1 goto :failed
+)
 
 set "exitCode=0"
 goto :finish
