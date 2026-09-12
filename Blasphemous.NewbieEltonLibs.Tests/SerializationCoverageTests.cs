@@ -56,7 +56,7 @@ public sealed class SerializationCoverageTests
         Assert.True(allObjects.CanConvert(typeof(Texture2D)));
         Assert.False(allObjects.CanConvert(typeof(string)));
 
-        UnityEngineIgnoreConverter custom = new(new[] { typeof(Texture), typeof(string) });
+        UnityEngineIgnoreConverter custom = new([typeof(Texture), typeof(string)]);
         Assert.True(custom.CanConvert(typeof(Texture2D)));
         Assert.False(custom.CanConvert(typeof(GameObject)));
         Assert.False(custom.CanConvert(typeof(string)));

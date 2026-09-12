@@ -63,20 +63,85 @@ rem First apply warning/error style fixes and import formatting.
 dotnet format style "%formatTarget%" --no-restore --severity warn
 if errorlevel 1 goto :failed
 
-rem Apply info-level fixes one diagnostic at a time to avoid an aggregate
-rem MSBuildWorkspace document-properties change.
-rem IDE0060 has no associated code fix and is intentionally omitted.
-for %%D in (IDE0018 IDE0028 IDE0039 IDE0041 IDE0044 IDE0062 IDE0066 IDE0090 IDE0130 IDE0270 IDE0290 IDE0300 IDE0301 IDE0305) do (
-    dotnet format style "%formatTarget%" --no-restore --severity info --diagnostics %%D
-    if errorlevel 1 goto :failed
+rem Discover info-level diagnostics from the actual workspace.
+set "formatTempDirectory=%TEMP%\dotnet-format-%RANDOM%-%RANDOM%"
+if exist "%formatTempDirectory%" (
+    echo Temporary format directory already exists: "%formatTempDirectory%"
+    set "exitCode=1"
+    goto :finish
+)
+md "%formatTempDirectory%"
+if errorlevel 1 (
+    echo Failed to create temporary format directory: "%formatTempDirectory%"
+    set "exitCode=1"
+    goto :finish
+)
+set "formatTempOwned=1"
+set "formatReportPath=%formatTempDirectory%\info-report.json"
+set "infoDiagnosticListPath=%formatTempDirectory%\info-diagnostics.txt"
+
+dotnet format style "%formatTarget%" --no-restore --severity info --verify-no-changes --report "%formatReportPath%"
+set "discoveryExitCode=%errorlevel%"
+if not exist "%formatReportPath%" (
+    echo Failed to discover info diagnostics. dotnet format exited with %discoveryExitCode%.
+    set "exitCode=%discoveryExitCode%"
+    if "%exitCode%"=="0" set "exitCode=1"
+    goto :finish
+)
+if not "%discoveryExitCode%"=="0" echo Info discovery returned %discoveryExitCode%; using the generated report.
+
+rem The report has no code-fix metadata. The subroutine below classifies
+rem "No associated code fix found" as a skipped, non-failing diagnostic.
+powershell.exe -NoProfile -NonInteractive -Command "$report = Get-Content -Raw -LiteralPath $env:formatReportPath | ConvertFrom-Json; $ids = @($report | ForEach-Object { $_.FileChanges } | Where-Object { $_.DiagnosticId } | Select-Object -ExpandProperty DiagnosticId -Unique | Where-Object { $_ -ne 'IDE0130' -and $_ -ne 'IMPORTS' } | Sort-Object); [System.IO.File]::WriteAllLines($env:infoDiagnosticListPath, [string[]]$ids, [System.Text.Encoding]::ASCII)"
+if errorlevel 1 (
+    echo Failed to parse the info diagnostic report.
+    set "exitCode=1"
+    goto :finish
 )
 
-set "exitCode=0"
+set "infoFormatFailed=0"
+for /f "usebackq delims=" %%D in ("%infoDiagnosticListPath%") do (
+    call :formatInfoDiagnostic "%%D"
+    if errorlevel 1 set "infoFormatFailed=1"
+)
+
+if "%infoFormatFailed%"=="1" (
+    echo Info formatting completed with one or more failures.
+    set "exitCode=1"
+) else (
+    set "exitCode=0"
+)
 goto :finish
 
 :failed
 set "exitCode=%errorlevel%"
 
 :finish
+if defined formatTempOwned if "%exitCode%"=="0" (
+    rmdir /s /q "%formatTempDirectory%" >nul 2>&1
+)
+if defined formatTempOwned if not "%exitCode%"=="0" (
+    echo Diagnostic report retained at "%formatTempDirectory%".
+)
 popd
 exit /b %exitCode%
+
+:formatInfoDiagnostic
+set "diagnosticId=%~1"
+set "diagnosticLogPath=%formatTempDirectory%\%diagnosticId%.log"
+
+echo Applying info diagnostic %diagnosticId%...
+dotnet format style "%formatTarget%" --no-restore --severity info --diagnostics %diagnosticId% > "%diagnosticLogPath%" 2>&1
+set "diagnosticExitCode=%errorlevel%"
+type "%diagnosticLogPath%"
+
+findstr /i /c:"No associated code fix found" "%diagnosticLogPath%" >nul
+if not errorlevel 1 (
+    echo Skipped %diagnosticId%: no associated code fix found.
+    exit /b 0
+)
+if not "%diagnosticExitCode%"=="0" (
+    echo ERROR: info diagnostic %diagnosticId% failed; continuing.
+    exit /b 1
+)
+exit /b 0
