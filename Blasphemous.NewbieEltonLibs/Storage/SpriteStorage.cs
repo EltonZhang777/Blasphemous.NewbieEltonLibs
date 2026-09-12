@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Blasphemous.NewbieEltonLibs.Extensions.System;
 using UnityEngine;
 
 namespace Blasphemous.NewbieEltonLibs.Storage;
@@ -10,12 +11,19 @@ namespace Blasphemous.NewbieEltonLibs.Storage;
 public class SpriteStorage
 {
     private readonly Dictionary<string, Sprite> _sprites = new Dictionary<string, Sprite>();
+    private readonly Func<Sprite, bool> _validateSprite;
 
     /// <summary>
     /// Creates an empty sprite registry.
     /// </summary>
     public SpriteStorage()
+        : this(IsValidSprite)
     {
+    }
+
+    internal SpriteStorage(Func<Sprite, bool> validateSprite)
+    {
+        _validateSprite = validateSprite;
     }
 
     /// <summary>
@@ -43,13 +51,12 @@ public class SpriteStorage
     /// </summary>
     /// <param name="name">The name that identifies the sprite.</param>
     /// <param name="sprite">The already-created sprite to register.</param>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="name" /> is empty.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name" /> or <paramref name="sprite" /> is invalid.</exception>
     /// <exception cref="InvalidOperationException">Thrown when <paramref name="name" /> is already registered.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="name" /> or <paramref name="sprite" /> is null.</exception>
     public void Register(string name, Sprite sprite)
     {
-        ValidateName(name);
-        ValidateSprite(sprite);
+        ValidateName(name, true);
+        ValidateSprite(sprite, true);
 
         if (_sprites.ContainsKey(name))
         {
@@ -64,13 +71,12 @@ public class SpriteStorage
     /// </summary>
     /// <param name="name">The name of the sprite to replace.</param>
     /// <param name="sprite">The already-created replacement sprite.</param>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="name" /> is empty.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name" /> or <paramref name="sprite" /> is invalid.</exception>
     /// <exception cref="KeyNotFoundException">Thrown when <paramref name="name" /> is not registered.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="name" /> or <paramref name="sprite" /> is null.</exception>
     public void Replace(string name, Sprite sprite)
     {
-        ValidateName(name);
-        ValidateSprite(sprite);
+        ValidateName(name, true);
+        ValidateSprite(sprite, true);
 
         if (!_sprites.ContainsKey(name))
         {
@@ -88,7 +94,7 @@ public class SpriteStorage
     /// <returns><see langword="true" /> when the sprite was registered; otherwise, <see langword="false" />.</returns>
     public bool TryRegister(string name, Sprite sprite)
     {
-        if (!IsValidName(name) || sprite == null || _sprites.ContainsKey(name))
+        if (!ValidateName(name, false) || !ValidateSprite(sprite, false) || _sprites.ContainsKey(name))
         {
             return false;
         }
@@ -105,7 +111,7 @@ public class SpriteStorage
     /// <returns><see langword="true" /> when the sprite was replaced; otherwise, <see langword="false" />.</returns>
     public bool TryReplace(string name, Sprite sprite)
     {
-        if (!IsValidName(name) || sprite == null || !_sprites.ContainsKey(name))
+        if (!ValidateName(name, false) || !ValidateSprite(sprite, false) || !_sprites.ContainsKey(name))
         {
             return false;
         }
@@ -122,7 +128,7 @@ public class SpriteStorage
     /// <returns><see langword="true" /> when a sprite was found; otherwise, <see langword="false" />.</returns>
     public bool TryGet(string name, out Sprite? sprite)
     {
-        if (!IsValidName(name))
+        if (!ValidateName(name, false))
         {
             sprite = null;
             return false;
@@ -131,29 +137,18 @@ public class SpriteStorage
         return _sprites.TryGetValue(name, out sprite);
     }
 
-    private static bool IsValidName(string name)
+    private static bool ValidateName(string name, bool throwError)
     {
-        return !string.IsNullOrEmpty(name);
+        return ValidationUtils.Validate(name, value => !string.IsNullOrEmpty(value), logToModLog: false, throwError: throwError);
     }
 
-    private static void ValidateName(string name)
+    private bool ValidateSprite(Sprite sprite, bool throwError)
     {
-        if (name == null)
-        {
-            throw new ArgumentNullException(nameof(name));
-        }
-
-        if (name.Length == 0)
-        {
-            throw new ArgumentException("A sprite name cannot be empty.", nameof(name));
-        }
+        return ValidationUtils.Validate(sprite, _validateSprite, logToModLog: false, throwError: throwError);
     }
 
-    private static void ValidateSprite(Sprite sprite)
+    private static bool IsValidSprite(Sprite value)
     {
-        if (sprite == null)
-        {
-            throw new ArgumentNullException(nameof(sprite));
-        }
+        return !ReferenceEquals(value, null) && value != null;
     }
 }
