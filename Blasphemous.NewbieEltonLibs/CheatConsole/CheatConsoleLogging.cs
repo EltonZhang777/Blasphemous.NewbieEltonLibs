@@ -1,5 +1,5 @@
 using Blasphemous.ModdingAPI;
-using HarmonyLib;
+using Blasphemous.NewbieEltonLibs.HarmonyPatches;
 using System;
 using System.Diagnostics;
 using System.Reflection;
@@ -36,16 +36,11 @@ public enum LogLevel
 /// </summary>
 public static class CheatConsoleLogging
 {
-    private const string HarmonyId = "Blasphemous.NewbieEltonLibs.CheatConsoleLogging";
     private const string InputPrefix = "[CheatConsole Input] ";
     private const string OutputPrefix = "[CheatConsole Output] ";
 
-    private static readonly object SyncRoot = new object();
-
     private static readonly ConsoleLogChannel InputChannel = new ConsoleLogChannel();
     private static readonly ConsoleLogChannel OutputChannel = new ConsoleLogChannel();
-
-    private static bool patchApplied;
 
     /// <summary>
     /// Enables or disables logging of submitted cheat-console commands.
@@ -58,7 +53,7 @@ public static class CheatConsoleLogging
     {
         ValidateLogLevel(logLevel);
         InputChannel.Configure(active, logLevel, debugBuildOnly, IsAssemblyDebugBuild(Assembly.GetCallingAssembly()));
-        TryEnsurePatched();
+        HarmonyPatchInstaller.TryEnsurePatched();
     }
 
     /// <summary>
@@ -72,33 +67,7 @@ public static class CheatConsoleLogging
     {
         ValidateLogLevel(logLevel);
         OutputChannel.Configure(active, logLevel, debugBuildOnly, IsAssemblyDebugBuild(Assembly.GetCallingAssembly()));
-        TryEnsurePatched();
-    }
-
-    private static bool TryEnsurePatched()
-    {
-        if (patchApplied)
-            return true;
-
-        lock (SyncRoot)
-        {
-            if (patchApplied)
-                return true;
-
-            try
-            {
-                Harmony harmony = new Harmony(HarmonyId);
-                harmony.PatchAll(typeof(ConsoleWidget_Submit_CheatConsoleInput_Patch));
-                harmony.PatchAll(typeof(ConsoleWidget_Write_CheatConsoleOutput_Patch));
-                patchApplied = true;
-                return true;
-            }
-            catch (Exception exception)
-            {
-                ModLog.Error($"Failed to install cheat-console logging patches: {exception}");
-                return false;
-            }
-        }
+        HarmonyPatchInstaller.TryEnsurePatched();
     }
 
     private static void ValidateLogLevel(LogLevel logLevel)

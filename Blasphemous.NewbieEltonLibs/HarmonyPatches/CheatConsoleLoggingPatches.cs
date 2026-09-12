@@ -1,8 +1,9 @@
+using Blasphemous.NewbieEltonLibs.CheatConsole;
 using Gameplay.UI.Widgets;
 using HarmonyLib;
 using Sirenix.Utilities;
 
-namespace Blasphemous.NewbieEltonLibs.CheatConsole;
+namespace Blasphemous.NewbieEltonLibs.HarmonyPatches;
 
 [HarmonyPatch(typeof(ConsoleWidget), "Submit")]
 internal static class ConsoleWidget_Submit_CheatConsoleInput_Patch
