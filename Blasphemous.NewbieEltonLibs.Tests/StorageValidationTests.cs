@@ -1,4 +1,5 @@
 using Blasphemous.NewbieEltonLibs.Storage;
+using Blasphemous.NewbieEltonLibs.Extensions.GameLibs;
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -104,7 +105,12 @@ public sealed class StorageValidationTests
 
     private static AnimationInfo CreateAnimation(string name)
     {
-        return new AnimationInfo(name, new Sprite[] { null! }, 0.1f);
+        // ponytail: use an uninitialized fixture because this net8 smoke host has no Unity native runtime; replace with a live Sprite when host support exists.
+        AnimationInfo animation = (AnimationInfo)RuntimeHelpers.GetUninitializedObject(typeof(AnimationInfo));
+        TraverseUtils.SetValue(ref animation, "<Name>k__BackingField", name);
+        TraverseUtils.SetValue(ref animation, "<Sprites>k__BackingField", new Sprite[] { null! });
+        TraverseUtils.SetValue(ref animation, "<SecondsPerFrame>k__BackingField", 0.1f);
+        return animation;
     }
 
     private static Sprite CreateSprite()
