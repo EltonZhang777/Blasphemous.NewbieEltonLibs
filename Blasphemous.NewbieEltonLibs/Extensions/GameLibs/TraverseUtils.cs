@@ -1,4 +1,5 @@
 using Blasphemous.ModdingAPI;
+using Blasphemous.NewbieEltonLibs.Extensions.System;
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
@@ -88,7 +89,7 @@ public static class TraverseUtils
     /// </summary>
     public static void SetValueIfValidated<TTarget, TValue>(ref TTarget obj, string variableName, TValue value, Func<TValue, bool> validate, TraverseAccessType accessType = TraverseAccessType.Field)
     {
-        if (!validate(value))
+        if (!ValidationUtils.Validate(value, validate, logToModLog: false, throwError: false))
         {
             return;
         }
@@ -101,7 +102,7 @@ public static class TraverseUtils
     /// </summary>
     public static void SetValueIfValidated<TValue>(ref Traverse traverse, string variableName, TValue value, Func<TValue, bool> validate, TraverseAccessType accessType = TraverseAccessType.Field)
     {
-        if (!validate(value))
+        if (!ValidationUtils.Validate(value, validate, logToModLog: false, throwError: false))
         {
             return;
         }
@@ -116,7 +117,7 @@ public static class TraverseUtils
     {
         foreach (Func<TValue, bool> validate in validates)
         {
-            if (!validate(value))
+            if (!ValidationUtils.Validate(value, validate, logToModLog: false, throwError: false))
             {
                 return;
             }
@@ -183,16 +184,9 @@ public static class TraverseUtils
     /// <summary>
     /// Send an error log (or throw an error) if the given object does not satisfy the given restrictions
     /// </summary>
+    [Obsolete("Use ValidationUtils.Validate instead.")]
     public static bool Validate<T>(T obj, Func<T, bool> validate, bool throwError = false)
     {
-        if (!validate(obj))
-        {
-            string errorMessage = $"`{obj}` of type `{typeof(T)}` isn't a valid argument";
-            ArgumentException exception = new(errorMessage);
-            ModLog.Error(errorMessage);
-            if (throwError)
-                throw exception;
-        }
-        return validate(obj);
+        return ValidationUtils.Validate(obj, validate, logToModLog: true, throwError: throwError);
     }
 }

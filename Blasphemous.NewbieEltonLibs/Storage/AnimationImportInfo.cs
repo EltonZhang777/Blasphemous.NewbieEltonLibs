@@ -1,4 +1,6 @@
 using System;
+using System.Text;
+using Blasphemous.NewbieEltonLibs.Extensions.System;
 
 namespace Blasphemous.NewbieEltonLibs.Storage;
 
@@ -10,49 +12,60 @@ public class AnimationImportInfo
     /// <summary>
     /// Creates validated animation import information.
     /// </summary>
-    /// <param name="name">The non-empty animation name.</param>
-    /// <param name="filePath">The non-empty path to the animation spritesheet.</param>
+    /// <param name="name">The non-empty, non-whitespace animation name.</param>
+    /// <param name="filePath">The non-empty, non-whitespace path to the animation spritesheet.</param>
     /// <param name="width">The positive width of each spritesheet frame.</param>
     /// <param name="height">The positive height of each spritesheet frame.</param>
     /// <param name="secondsPerFrame">The positive duration of each frame in seconds.</param>
-    /// <exception cref="ArgumentException">Thrown when a string argument is empty.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when a string argument is null.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when a numeric argument is not positive.</exception>
+    /// <exception cref="ArgumentException">Thrown when any argument is invalid.</exception>
     public AnimationImportInfo(string name, string filePath, int width, int height, float secondsPerFrame)
     {
-        if (name == null)
+        StringBuilder errorMessage = new StringBuilder();
+
+        if (!ValidationUtils.Validate(name, value => value != null, logToModLog: false, throwError: false))
         {
-            throw new ArgumentNullException(nameof(name));
+            AppendError(errorMessage, "An animation name cannot be null.");
+        }
+        else if (!ValidationUtils.Validate(name, value => value.Length > 0, logToModLog: false, throwError: false))
+        {
+            AppendError(errorMessage, "An animation name cannot be empty.");
+        }
+        else if (!ValidationUtils.Validate(name, value => value.Trim().Length > 0, logToModLog: false, throwError: false))
+        {
+            AppendError(errorMessage, "An animation name cannot be whitespace.");
         }
 
-        if (name.Length == 0)
+        if (!ValidationUtils.Validate(filePath, value => value != null, logToModLog: false, throwError: false))
         {
-            throw new ArgumentException("An animation name cannot be empty.", nameof(name));
+            AppendError(errorMessage, "An animation file path cannot be null.");
+        }
+        else if (!ValidationUtils.Validate(filePath, value => value.Length > 0, logToModLog: false, throwError: false))
+        {
+            AppendError(errorMessage, "An animation file path cannot be empty.");
+        }
+        else if (!ValidationUtils.Validate(filePath, value => value.Trim().Length > 0, logToModLog: false, throwError: false))
+        {
+            AppendError(errorMessage, "An animation file path cannot be whitespace.");
         }
 
-        if (filePath == null)
+        if (!ValidationUtils.Validate(width, value => value > 0, logToModLog: false, throwError: false))
         {
-            throw new ArgumentNullException(nameof(filePath));
+            AppendError(errorMessage, "Frame width must be positive.");
         }
 
-        if (filePath.Length == 0)
+        if (!ValidationUtils.Validate(height, value => value > 0, logToModLog: false, throwError: false))
         {
-            throw new ArgumentException("An animation file path cannot be empty.", nameof(filePath));
+            AppendError(errorMessage, "Frame height must be positive.");
         }
 
-        if (width <= 0)
+        if (!ValidationUtils.Validate(secondsPerFrame, value => value > 0, logToModLog: false, throwError: false))
         {
-            throw new ArgumentOutOfRangeException(nameof(width), "Frame width must be positive.");
+            AppendError(errorMessage, "Frame duration must be positive.");
         }
 
-        if (height <= 0)
+        if (errorMessage.Length > 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(height), "Frame height must be positive.");
-        }
-
-        if (!(secondsPerFrame > 0))
-        {
-            throw new ArgumentOutOfRangeException(nameof(secondsPerFrame), "Frame duration must be positive.");
+            throw new ArgumentException(errorMessage.ToString());
         }
 
         Name = name;
@@ -60,6 +73,16 @@ public class AnimationImportInfo
         Width = width;
         Height = height;
         SecondsPerFrame = secondsPerFrame;
+    }
+
+    private static void AppendError(StringBuilder errorMessage, string message)
+    {
+        if (errorMessage.Length > 0)
+        {
+            errorMessage.Append(Environment.NewLine);
+        }
+
+        errorMessage.Append(message);
     }
 
     /// <summary>

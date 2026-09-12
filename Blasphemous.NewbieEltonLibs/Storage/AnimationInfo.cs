@@ -1,4 +1,6 @@
 using System;
+using System.Text;
+using Blasphemous.NewbieEltonLibs.Extensions.System;
 using UnityEngine;
 
 namespace Blasphemous.NewbieEltonLibs.Storage;
@@ -11,42 +13,69 @@ public class AnimationInfo
     /// <summary>
     /// Creates a validated animation description.
     /// </summary>
-    /// <param name="name">The non-empty animation name.</param>
-    /// <param name="sprites">The non-empty sequence of animation frames.</param>
+    /// <param name="name">The non-empty, non-whitespace animation name.</param>
+    /// <param name="sprites">The non-empty sequence of non-null animation frames.</param>
     /// <param name="secondsPerFrame">The positive duration of each frame in seconds.</param>
-    /// <exception cref="ArgumentException">Thrown when the name is empty or the frame sequence is empty.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when the name or frame sequence is null.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="secondsPerFrame" /> is not positive.</exception>
+    /// <exception cref="ArgumentException">Thrown when any argument is invalid.</exception>
     public AnimationInfo(string name, Sprite[] sprites, float secondsPerFrame)
     {
-        if (name == null)
+        StringBuilder errorMessage = new StringBuilder();
+
+        if (!ValidationUtils.Validate(name, value => value != null, logToModLog: false, throwError: false))
         {
-            throw new ArgumentNullException(nameof(name));
+            AppendError(errorMessage, "An animation name cannot be null.");
+        }
+        else if (!ValidationUtils.Validate(name, value => value.Length > 0, logToModLog: false, throwError: false))
+        {
+            AppendError(errorMessage, "An animation name cannot be empty.");
+        }
+        else if (!ValidationUtils.Validate(name, value => value.Trim().Length > 0, logToModLog: false, throwError: false))
+        {
+            AppendError(errorMessage, "An animation name cannot be whitespace.");
         }
 
-        if (name.Length == 0)
+        if (!ValidationUtils.Validate(sprites, value => value != null, logToModLog: false, throwError: false))
         {
-            throw new ArgumentException("An animation name cannot be empty.", nameof(name));
+            AppendError(errorMessage, "Animation sprites cannot be null.");
+        }
+        else if (!ValidationUtils.Validate(sprites, value => value.Length > 0, logToModLog: false, throwError: false))
+        {
+            AppendError(errorMessage, "An animation must contain at least one frame.");
+        }
+        else
+        {
+            for (int index = 0; index < sprites.Length; index++)
+            {
+                if (!ValidationUtils.Validate(sprites[index], value => !ReferenceEquals(value, null) && value != null, logToModLog: false, throwError: false))
+                {
+                    AppendError(errorMessage, "An animation sprite at index " + index + " cannot be null.");
+                }
+            }
         }
 
-        if (sprites == null)
+        if (!ValidationUtils.Validate(secondsPerFrame, value => value > 0, logToModLog: false, throwError: false))
         {
-            throw new ArgumentNullException(nameof(sprites));
+            AppendError(errorMessage, "Frame duration must be positive.");
         }
 
-        if (sprites.Length == 0)
+        if (errorMessage.Length > 0)
         {
-            throw new ArgumentException("An animation must contain at least one frame.", nameof(sprites));
-        }
-
-        if (!(secondsPerFrame > 0))
-        {
-            throw new ArgumentOutOfRangeException(nameof(secondsPerFrame), "Frame duration must be positive.");
+            throw new ArgumentException(errorMessage.ToString());
         }
 
         Name = name;
         Sprites = sprites;
         SecondsPerFrame = secondsPerFrame;
+    }
+
+    private static void AppendError(StringBuilder errorMessage, string message)
+    {
+        if (errorMessage.Length > 0)
+        {
+            errorMessage.Append(Environment.NewLine);
+        }
+
+        errorMessage.Append(message);
     }
 
     /// <summary>
