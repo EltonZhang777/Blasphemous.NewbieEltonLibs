@@ -107,15 +107,15 @@ internal static class FlagApiSmokeTests
         EventManager events = CreateEvents();
         Dictionary<string, FlagObject> flags = TraverseUtils.GetValue<Dictionary<string, FlagObject>>(events, "flags")!;
 
-        Assert(!ModFlagAdapter.TryGet(events, "EXAMPLE.MOD:MISSING", out _));
+        Assert(!ModFlagAdapter.TryGet(events, "example.mod:missing", out _));
         FlagObject storedFalse = CreateFlag(false, false);
         flags["EXAMPLE.MOD:STORED_FALSE"] = storedFalse;
-        Assert(ModFlagAdapter.TryGet(events, "EXAMPLE.MOD:STORED_FALSE", out bool storedValue));
+        Assert(ModFlagAdapter.TryGet(events, "Example.Mod:stored false", out bool storedValue));
         Assert(!storedValue);
 
         FlagObject preserved = CreateFlag(true, true);
         flags["EXAMPLE.MOD:PRESERVED"] = preserved;
-        Assert(ModFlagAdapter.TryGet(events, "EXAMPLE.MOD:PRESERVED", out bool preservedValue));
+        Assert(ModFlagAdapter.TryGet(events, "Example.Mod:preserved", out bool preservedValue));
         Assert(preservedValue && flags["EXAMPLE.MOD:PRESERVED"].preserveInNewGamePlus);
     }
 
