@@ -12,11 +12,11 @@ public sealed class SystemExtensionsCoverageTests
     [Fact]
     public void MoveReordersItemsAtTheRequestedIndexes()
     {
-        List<string> forward = new List<string> { "a", "b", "c", "d" };
+        List<string> forward = ["a", "b", "c", "d"];
         forward.Move(1, 3);
         Assert.Equal(new[] { "a", "c", "d", "b" }, forward);
 
-        List<string> backward = new List<string> { "a", "b", "c", "d" };
+        List<string> backward = ["a", "b", "c", "d"];
         backward.Move(3, 1);
         Assert.Equal(new[] { "a", "d", "b", "c" }, backward);
 

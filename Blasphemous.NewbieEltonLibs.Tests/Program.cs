@@ -1,3 +1,15 @@
+using BepInEx.Logging;
+using Blasphemous.ModdingAPI;
+using Blasphemous.ModdingAPI.Helpers;
+using Blasphemous.NewbieEltonLibs.Components;
+using Blasphemous.NewbieEltonLibs.Extensions.GameLibs;
+using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
+using Blasphemous.NewbieEltonLibs.Serialization;
+using Blasphemous.NewbieEltonLibs.Tests;
+using Framework.FrameworkCore;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -7,18 +19,6 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using BepInEx.Logging;
-using Blasphemous.ModdingAPI;
-using Blasphemous.ModdingAPI.Helpers;
-using Blasphemous.NewbieEltonLibs.Tests;
-using Blasphemous.NewbieEltonLibs.Components;
-using Blasphemous.NewbieEltonLibs.Extensions.GameLibs;
-using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
-using Blasphemous.NewbieEltonLibs.Serialization;
-using Framework.FrameworkCore;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 namespace Blasphemous.NewbieEltonLibs.Tests;
@@ -93,7 +93,7 @@ internal static class Program
         IEnumerable<string> values = items.Items;
 
         items.DerivedItem = "updated";
-        List<string> enumerated = values.ToList();
+        List<string> enumerated = [.. values];
 
         Assert(enumerated.Contains("base"), "Inherited matching field was not collected.");
         Assert(enumerated.Contains("updated"), "Field changes were not observed by deferred enumeration.");
@@ -129,14 +129,14 @@ internal static class Program
     {
         UnityEngineIgnoreConverter defaultConverter = new();
         Type[] defaultTypes =
-        {
+        [
             typeof(GameObject),
             typeof(Transform),
             typeof(Texture),
             typeof(Sprite),
             typeof(UnityEngine.UI.Image),
             typeof(Material)
-        };
+        ];
 
         foreach (Type defaultType in defaultTypes)
             Assert(defaultConverter.CanConvert(defaultType), "Default converter type set changed.");
@@ -155,7 +155,7 @@ internal static class Program
         Assert(allUnityObjectsConverter.CanConvert(typeof(Texture2D)), "All-object converter does not match a Unity object subtype.");
         Assert(!allUnityObjectsConverter.CanConvert(typeof(string)), "All-object converter matched a non-Unity type.");
 
-        List<Type> customTypes = new() { typeof(Texture), typeof(string) };
+        List<Type> customTypes = [typeof(Texture), typeof(string)];
         UnityEngineIgnoreConverter customConverter = new(customTypes);
         customTypes.Clear();
         Assert(customConverter.CanConvert(typeof(Texture)), "Custom converter does not match its configured type.");
@@ -214,8 +214,8 @@ internal static class Program
     {
         SmokeMod mod = CreateRegisteredSmokeMod();
         ManualLogSource modLogger = FindLogSource(mod.Name);
-        List<LogEventArgs> modEvents = new();
-        EventHandler<LogEventArgs> modHandler = (_, logEvent) => modEvents.Add(logEvent);
+        List<LogEventArgs> modEvents = [];
+        void modHandler(object? _, LogEventArgs logEvent) => modEvents.Add(logEvent);
         modLogger.LogEvent += modHandler;
 
         try
@@ -249,8 +249,8 @@ internal static class Program
             loadedMods.Clear();
 
             ManualLogSource unknownLogger = FindLogSource("Unknown mod");
-            List<LogEventArgs> unknownEvents = new();
-            EventHandler<LogEventArgs> unknownHandler = (_, logEvent) => unknownEvents.Add(logEvent);
+            List<LogEventArgs> unknownEvents = [];
+            void unknownHandler(object? _, LogEventArgs logEvent) => unknownEvents.Add(logEvent);
             unknownLogger.LogEvent += unknownHandler;
             try
             {
@@ -281,10 +281,10 @@ internal static class Program
 
         PropertyInfo loadedModsProperty = typeof(ModHelper).GetProperty(
             "LoadedMods", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)!;
-        loadedModsProperty.GetSetMethod(true)!.Invoke(null, new object[] { new List<BlasMod> { mod } });
+        loadedModsProperty.GetSetMethod(true)!.Invoke(null, [new List<BlasMod> { mod }]);
 
         MethodInfo registerMethod = typeof(ModLog).GetMethod("Register", BindingFlags.Static | BindingFlags.NonPublic)!;
-        registerMethod.Invoke(null, new object[] { mod });
+        registerMethod.Invoke(null, [mod]);
         return mod;
     }
 
@@ -297,7 +297,7 @@ internal static class Program
     private static void AssertLog(IEnumerable<LogEventArgs> events, string message, LogLevel level, string sourceName)
     {
         string expectedMessage = "[DEBUG] " + message;
-        List<LogEventArgs> capturedEvents = events.ToList();
+        List<LogEventArgs> capturedEvents = [.. events];
         Assert(capturedEvents.Any(logEvent =>
             logEvent.Level == level &&
             logEvent.Source.SourceName == sourceName &&
@@ -316,7 +316,7 @@ internal static class Program
         public static string StaticItem = "static";
         public string DerivedItem = "derived";
         public int NotAnItem = 123;
-        public object AlsoNotAnItem = new object();
+        public object AlsoNotAnItem = new();
         public string NullItem = null!;
     }
 

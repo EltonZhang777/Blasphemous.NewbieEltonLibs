@@ -1,6 +1,6 @@
+using Blasphemous.NewbieEltonLibs.Extensions.System;
 using System;
 using System.Collections.Generic;
-using Blasphemous.NewbieEltonLibs.Extensions.System;
 using UnityEngine;
 
 namespace Blasphemous.NewbieEltonLibs.Storage;
@@ -10,7 +10,7 @@ namespace Blasphemous.NewbieEltonLibs.Storage;
 /// </summary>
 public class SpriteStorage
 {
-    private readonly Dictionary<string, Sprite> _sprites = new Dictionary<string, Sprite>();
+    private readonly Dictionary<string, Sprite> _sprites = [];
     private readonly Func<Sprite, bool> _validateSprite;
 
     /// <summary>
@@ -36,8 +36,7 @@ public class SpriteStorage
     {
         get
         {
-            Sprite? sprite;
-            if (_sprites.TryGetValue(name, out sprite))
+            if (_sprites.TryGetValue(name, out Sprite? sprite))
             {
                 return sprite;
             }
@@ -149,6 +148,6 @@ public class SpriteStorage
 
     private static bool IsValidSprite(Sprite value)
     {
-        return !ReferenceEquals(value, null) && value != null;
+        return value is not null && value != null;
     }
 }

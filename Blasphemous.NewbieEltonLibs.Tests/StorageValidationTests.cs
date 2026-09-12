@@ -1,5 +1,5 @@
-using Blasphemous.NewbieEltonLibs.Storage;
 using Blasphemous.NewbieEltonLibs.Extensions.GameLibs;
+using Blasphemous.NewbieEltonLibs.Storage;
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -15,14 +15,14 @@ public sealed class StorageValidationTests
     [Fact]
     public void StrictOperationsRejectInvalidArgumentsWithoutLogging()
     {
-        AnimationStorage animations = new AnimationStorage();
+        AnimationStorage animations = new();
         List<BepInEx.Logging.LogEventArgs> animationLogs = ValidationTests.CaptureUnknownModErrors(() =>
         {
             Assert.IsType<ArgumentException>(Assert.Throws<ArgumentException>(() => animations.Register(null!)));
             Assert.IsType<ArgumentException>(Assert.Throws<ArgumentException>(() => animations.Replace(null!)));
         });
 
-        SpriteStorage sprites = new SpriteStorage();
+        SpriteStorage sprites = new();
         List<BepInEx.Logging.LogEventArgs> spriteLogs = ValidationTests.CaptureUnknownModErrors(() =>
         {
             Assert.IsType<ArgumentException>(Assert.Throws<ArgumentException>(() => sprites.Register("", null!)));
@@ -39,8 +39,8 @@ public sealed class StorageValidationTests
     [Fact]
     public void TryOperationsRejectInvalidArgumentsWithoutLogging()
     {
-        AnimationStorage animations = new AnimationStorage();
-        SpriteStorage sprites = new SpriteStorage();
+        AnimationStorage animations = new();
+        SpriteStorage sprites = new();
 
         List<BepInEx.Logging.LogEventArgs> logs = ValidationTests.CaptureUnknownModErrors(() =>
         {
@@ -61,7 +61,7 @@ public sealed class StorageValidationTests
     [Fact]
     public void DefaultSpriteValidationUsesUnityNullOperator()
     {
-        SpriteStorage storage = new SpriteStorage();
+        SpriteStorage storage = new();
         Sprite sprite = CreateSprite();
 
         Assert.Throws<NullReferenceException>(() => storage.Register("hero", sprite));
@@ -71,7 +71,7 @@ public sealed class StorageValidationTests
     [Fact]
     public void AnimationRegistrationPreservesStateErrors()
     {
-        AnimationStorage storage = new AnimationStorage();
+        AnimationStorage storage = new();
         AnimationInfo first = CreateAnimation("idle");
         AnimationInfo replacement = CreateAnimation("idle");
 
@@ -89,7 +89,7 @@ public sealed class StorageValidationTests
     [Fact]
     public void SpriteRegistrationPreservesStateErrors()
     {
-        SpriteStorage storage = new SpriteStorage(value => !ReferenceEquals(value, null));
+        SpriteStorage storage = new(value => value is not null);
         Sprite first = CreateSprite();
         Sprite replacement = CreateSprite();
 

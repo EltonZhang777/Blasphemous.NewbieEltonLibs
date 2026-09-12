@@ -8,7 +8,7 @@ internal static class HarmonyPatchInstaller
 {
     private const string HarmonyId = "Blasphemous.NewbieEltonLibs";
 
-    private static readonly object SyncRoot = new object();
+    private static readonly object SyncRoot = new();
 
     private static bool patchApplied;
 
@@ -24,7 +24,7 @@ internal static class HarmonyPatchInstaller
 
             try
             {
-                Harmony harmony = new Harmony(HarmonyId);
+                Harmony harmony = new(HarmonyId);
                 harmony.PatchAll(typeof(HarmonyPatchInstaller).Assembly);
                 patchApplied = true;
                 return true;

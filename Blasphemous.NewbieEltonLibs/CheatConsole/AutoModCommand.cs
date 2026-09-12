@@ -152,17 +152,10 @@ public abstract class AutoModCommand : ModCommand
         };
     }
 
-    private sealed class SubCommandInfo
+    private sealed class SubCommandInfo(string name, string? usage, string description)
     {
-        public string Name;
-        public string? Usage;
-        public string Description;
-
-        public SubCommandInfo(string name, string? usage, string description)
-        {
-            Name = name;
-            Usage = usage;
-            Description = description;
-        }
+        public string Name = name;
+        public string? Usage = usage;
+        public string Description = description;
     }
 }

@@ -1,6 +1,6 @@
+using Blasphemous.NewbieEltonLibs.Extensions.System;
 using System;
 using System.Text;
-using Blasphemous.NewbieEltonLibs.Extensions.System;
 
 namespace Blasphemous.NewbieEltonLibs.Storage;
 
@@ -20,7 +20,7 @@ public class AnimationImportInfo
     /// <exception cref="ArgumentException">Thrown when any argument is invalid.</exception>
     public AnimationImportInfo(string name, string filePath, int width, int height, float secondsPerFrame)
     {
-        StringBuilder errorMessage = new StringBuilder();
+        StringBuilder errorMessage = new();
 
         if (!ValidationUtils.Validate(name, value => value != null, logToModLog: false, throwError: false))
         {

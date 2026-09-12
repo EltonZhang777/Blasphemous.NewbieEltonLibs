@@ -16,7 +16,7 @@ public sealed class SerializationCoverageTests
     [Fact]
     public void SerializableVector3ExposesStablePublicShape()
     {
-        SerializableVector3 value = new SerializableVector3(1.5f, -2.25f, 3f);
+        SerializableVector3 value = new(1.5f, -2.25f, 3f);
         Vector3 vector3 = default;
         vector3.x = 1.5f;
         vector3.y = -2.25f;
@@ -45,29 +45,29 @@ public sealed class SerializationCoverageTests
     [Fact]
     public void UnityEngineIgnoreConverterHonorsConfiguredTypes()
     {
-        UnityEngineIgnoreConverter defaults = new UnityEngineIgnoreConverter();
+        UnityEngineIgnoreConverter defaults = new();
         Assert.True(defaults.CanConvert(typeof(GameObject)));
         Assert.True(defaults.CanConvert(typeof(Texture)));
         Assert.False(defaults.CanConvert(typeof(Texture2D)));
         Assert.False(defaults.CanConvert(null!));
 
-        UnityEngineIgnoreConverter allObjects = new UnityEngineIgnoreConverter(true);
+        UnityEngineIgnoreConverter allObjects = new(true);
         Assert.True(allObjects.CanConvert(typeof(UnityEngine.Object)));
         Assert.True(allObjects.CanConvert(typeof(Texture2D)));
         Assert.False(allObjects.CanConvert(typeof(string)));
 
-        UnityEngineIgnoreConverter custom = new UnityEngineIgnoreConverter(new[] { typeof(Texture), typeof(string) });
+        UnityEngineIgnoreConverter custom = new(new[] { typeof(Texture), typeof(string) });
         Assert.True(custom.CanConvert(typeof(Texture2D)));
         Assert.False(custom.CanConvert(typeof(GameObject)));
         Assert.False(custom.CanConvert(typeof(string)));
 
-        StringWriter output = new StringWriter();
-        JsonTextWriter writer = new JsonTextWriter(output);
+        StringWriter output = new();
+        JsonTextWriter writer = new(output);
         defaults.WriteJson(writer, null, new JsonSerializer());
         writer.Flush();
         Assert.Equal("null", output.ToString());
 
-        JsonTextReader reader = new JsonTextReader(new StringReader("null"));
+        JsonTextReader reader = new(new StringReader("null"));
         Assert.True(reader.Read());
         Assert.Null(defaults.ReadJson(reader, typeof(Texture), null, new JsonSerializer()));
     }

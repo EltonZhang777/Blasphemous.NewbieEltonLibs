@@ -1,9 +1,9 @@
+using Blasphemous.CheatConsole;
 using Blasphemous.ModdingAPI;
 using Blasphemous.ModdingAPI.Config;
 using Blasphemous.ModdingAPI.Files;
 using Blasphemous.ModdingAPI.Input;
 using Blasphemous.ModdingAPI.Localization;
-using Blasphemous.CheatConsole;
 using Blasphemous.NewbieEltonLibs.Extensions.GameLibs;
 using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
 using Gameplay.UI.Widgets;
@@ -51,7 +51,7 @@ public sealed class ModdingApiCoverageTests
             Assert.Equal(10, JsonConvert.DeserializeObject<Payload>(
                 File.ReadAllText(Path.Combine(contentPath, "default-output.json")))!.Value);
 
-            JsonSerializerSettings settings = new JsonSerializerSettings
+            JsonSerializerSettings settings = new()
             {
                 NullValueHandling = NullValueHandling.Ignore
             };
@@ -88,7 +88,7 @@ public sealed class ModdingApiCoverageTests
             Assert.Equal(0, defaults.Value);
             Assert.True(File.Exists(configPath));
 
-            JsonSerializerSettings settings = new JsonSerializerSettings
+            JsonSerializerSettings settings = new()
             {
                 NullValueHandling = NullValueHandling.Ignore
             };
@@ -110,7 +110,7 @@ public sealed class ModdingApiCoverageTests
     public void InputHandlerExtensionsReadKeybindings()
     {
         InputHandler inputHandler = (InputHandler)RuntimeHelpers.GetUninitializedObject(typeof(InputHandler));
-        Dictionary<string, KeyCode> keybindings = new Dictionary<string, KeyCode>
+        Dictionary<string, KeyCode> keybindings = new()
         {
             ["jump"] = KeyCode.Space
         };
@@ -131,7 +131,7 @@ public sealed class ModdingApiCoverageTests
         TraverseUtils.SetValue(ref command, "console", console);
 
         Assert.Same(console, command.GetConsoleWidget());
-        Assert.True(command.ValidateParameterList(new[] { "value" }, 1));
+        Assert.True(command.ValidateParameterList(["value"], 1));
     }
 
     /// <summary>Verifies live framework extensions are represented by public signatures.</summary>
@@ -189,7 +189,7 @@ public sealed class ModdingApiCoverageTests
 
         protected override Dictionary<string, Action<string[]>> AddSubCommands()
         {
-            return new Dictionary<string, Action<string[]>>();
+            return [];
         }
     }
 }

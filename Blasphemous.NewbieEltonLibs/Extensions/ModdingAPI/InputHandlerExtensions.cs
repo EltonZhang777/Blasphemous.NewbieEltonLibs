@@ -39,7 +39,7 @@ public static class InputHandlerExtensions
             ? 0
             : currentAxis;
 
-        int FloatToIntAxis(float axis)
+        static int FloatToIntAxis(float axis)
         {
             if (axis > Mathf.Epsilon)
                 return 1;

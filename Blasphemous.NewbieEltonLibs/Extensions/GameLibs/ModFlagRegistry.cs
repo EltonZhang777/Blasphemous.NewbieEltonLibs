@@ -5,7 +5,7 @@ namespace Blasphemous.NewbieEltonLibs.Extensions.GameLibs;
 
 internal sealed class ModFlagRegistry
 {
-    private readonly Dictionary<string, ModFlagInfo> _registrations = new();
+    private readonly Dictionary<string, ModFlagInfo> _registrations = [];
 
     internal bool TryRegister(Type modType, string modId, string localName, bool preserveInNewGamePlus, out ModFlagInfo? registration)
     {

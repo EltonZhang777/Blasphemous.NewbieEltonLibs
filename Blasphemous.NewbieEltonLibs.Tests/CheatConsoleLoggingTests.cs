@@ -1,11 +1,11 @@
-using Gameplay.UI.Widgets;
 using Blasphemous.NewbieEltonLibs.CheatConsole;
 using Blasphemous.NewbieEltonLibs.HarmonyPatches;
+using Gameplay.UI.Widgets;
+using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using HarmonyLib;
 using Xunit;
 
 namespace Blasphemous.NewbieEltonLibs.Tests;
@@ -18,7 +18,7 @@ public sealed class CheatConsoleLoggingTests
     public void PublicApiExposesExpectedLevelsAndDefaults()
     {
         Assert.Equal(
-            new[] { "Info", "Warn", "Error", "Fatal", "Debug", "Display" },
+            ["Info", "Warn", "Error", "Fatal", "Debug", "Display"],
             Enum.GetNames(typeof(LogLevel)));
 
         AssertConfigurationMethod(nameof(CheatConsoleLogging.LogCheatConsoleInput));
@@ -29,7 +29,7 @@ public sealed class CheatConsoleLoggingTests
     [Fact]
     public void ChannelDefaultsToInfoAndDebugBuildOnly()
     {
-        ConsoleLogChannel channel = new ConsoleLogChannel();
+        ConsoleLogChannel channel = new();
 
         Assert.False(channel.Active);
         Assert.Equal(LogLevel.Info, channel.LogLevel);
@@ -42,7 +42,7 @@ public sealed class CheatConsoleLoggingTests
     [Fact]
     public void DisabledConfigurationStillStoresTheLatestSettings()
     {
-        ConsoleLogChannel channel = new ConsoleLogChannel();
+        ConsoleLogChannel channel = new();
 
         channel.Configure(true, LogLevel.Warn, false, false);
         channel.Configure(false, LogLevel.Fatal, true, true);
@@ -58,8 +58,8 @@ public sealed class CheatConsoleLoggingTests
     [Fact]
     public void InputAndOutputChannelsRemainIndependent()
     {
-        ConsoleLogChannel input = new ConsoleLogChannel();
-        ConsoleLogChannel output = new ConsoleLogChannel();
+        ConsoleLogChannel input = new();
+        ConsoleLogChannel output = new();
 
         input.Configure(true, LogLevel.Info, false, false);
         output.Configure(true, LogLevel.Error, true, false);
@@ -80,9 +80,9 @@ public sealed class CheatConsoleLoggingTests
     [InlineData(LogLevel.Display)]
     public void EnabledChannelUsesConfiguredLevelAndStablePrefix(LogLevel level)
     {
-        ConsoleLogChannel channel = new ConsoleLogChannel();
+        ConsoleLogChannel channel = new();
         channel.Configure(true, level, false, false);
-        List<KeyValuePair<LogLevel, object>> entries = new List<KeyValuePair<LogLevel, object>>();
+        List<KeyValuePair<LogLevel, object>> entries = [];
 
         CheatConsoleLogging.LogConfigured(
             channel,
@@ -99,7 +99,7 @@ public sealed class CheatConsoleLoggingTests
     [Fact]
     public void DebugBuildOnlyChannelRequiresDebugCaller()
     {
-        ConsoleLogChannel channel = new ConsoleLogChannel();
+        ConsoleLogChannel channel = new();
 
         channel.Configure(true, LogLevel.Info, true, false);
         Assert.False(channel.ShouldLog());
@@ -115,7 +115,7 @@ public sealed class CheatConsoleLoggingTests
     [Fact]
     public void DisabledChannelDoesNotInvokeLogSink()
     {
-        ConsoleLogChannel channel = new ConsoleLogChannel();
+        ConsoleLogChannel channel = new();
         channel.Configure(false, LogLevel.Info, false, false);
         bool invoked = false;
 
@@ -132,9 +132,9 @@ public sealed class CheatConsoleLoggingTests
     [Fact]
     public void OutputChannelUsesOutputPrefix()
     {
-        ConsoleLogChannel channel = new ConsoleLogChannel();
+        ConsoleLogChannel channel = new();
         channel.Configure(true, LogLevel.Warn, false, false);
-        List<KeyValuePair<LogLevel, object>> entries = new List<KeyValuePair<LogLevel, object>>();
+        List<KeyValuePair<LogLevel, object>> entries = [];
 
         CheatConsoleLogging.LogConfigured(
             channel,

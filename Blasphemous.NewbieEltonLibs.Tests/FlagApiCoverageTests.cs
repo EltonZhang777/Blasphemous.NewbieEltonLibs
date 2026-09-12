@@ -1,8 +1,8 @@
 using Blasphemous.NewbieEltonLibs.Extensions.GameLibs;
+using Framework.Managers;
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using Framework.Managers;
 using Xunit;
 
 namespace Blasphemous.NewbieEltonLibs.Tests;
@@ -49,7 +49,7 @@ public sealed class FlagApiCoverageTests
     public void VanillaAdapterReadsCanonicalIds()
     {
         EventManager events = (EventManager)RuntimeHelpers.GetUninitializedObject(typeof(EventManager));
-        Dictionary<string, FlagObject> flags = new Dictionary<string, FlagObject>();
+        Dictionary<string, FlagObject> flags = [];
         TraverseUtils.SetValue(ref events, "flags", flags);
         FlagObject storedFalse = (FlagObject)RuntimeHelpers.GetUninitializedObject(typeof(FlagObject));
         storedFalse.value = false;

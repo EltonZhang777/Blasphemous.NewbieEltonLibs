@@ -15,9 +15,7 @@ public static class I2Extensions
         ref string mainTranslation,
         ref string secondaryTranslation) where T : UObject
     {
-        string text;
-        string text2;
-        localize.DoDeserializeTranslation(mainTranslation, out text, out text2);
+        localize.DoDeserializeTranslation(mainTranslation, out string text, out string text2);
         T? t = null;
         if (!string.IsNullOrEmpty(text2))
         {
@@ -69,11 +67,7 @@ public static class I2Extensions
         {
             return default;
         }
-        T? translatedObject = localize.DoGetTranslatedObject<T>(Translation);
-        if (translatedObject == null)
-        {
-            translatedObject = localize.DoGetTranslatedObject<T>(Translation);
-        }
+        T? translatedObject = localize.DoGetTranslatedObject<T>(Translation) ?? localize.DoGetTranslatedObject<T>(Translation);
         return translatedObject;
     }
 

@@ -39,8 +39,8 @@ public static class CheatConsoleLogging
     private const string InputPrefix = "[CheatConsole Input] ";
     private const string OutputPrefix = "[CheatConsole Output] ";
 
-    private static readonly ConsoleLogChannel InputChannel = new ConsoleLogChannel();
-    private static readonly ConsoleLogChannel OutputChannel = new ConsoleLogChannel();
+    private static readonly ConsoleLogChannel InputChannel = new();
+    private static readonly ConsoleLogChannel OutputChannel = new();
 
     /// <summary>
     /// Enables or disables logging of submitted cheat-console commands.

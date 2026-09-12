@@ -14,7 +14,7 @@ namespace Blasphemous.NewbieEltonLibs.Tests;
 /// <summary>Verifies the shared validation contract and traversal migration.</summary>
 public sealed class ValidationTests
 {
-    private static readonly object LogCaptureLock = new object();
+    private static readonly object LogCaptureLock = new();
 
     /// <summary>Verifies invalid validation honors logging and throwing switches.</summary>
     [Theory]
@@ -75,7 +75,7 @@ public sealed class ValidationTests
     [Fact]
     public void PredicateExceptionPropagatesUnchanged()
     {
-        InvalidOperationException expected = new InvalidOperationException("predicate failed");
+        InvalidOperationException expected = new("predicate failed");
 
         InvalidOperationException actual = Assert.Throws<InvalidOperationException>(() =>
             ValidationUtils.Validate("value", value => throw expected));
@@ -124,7 +124,7 @@ public sealed class ValidationTests
     [Fact]
     public void ObjectTraversalSetterLeavesRejectedValueUnchanged()
     {
-        Target target = new Target();
+        Target target = new();
 
         TraverseUtils.SetValueIfValidated(ref target, "Value", 42, value => value > 0);
         TraverseUtils.SetValueIfValidated(ref target, "Value", -1, value => value > 0);
@@ -136,7 +136,7 @@ public sealed class ValidationTests
     [Fact]
     public void TraverseInstanceSetterWritesAcceptedValue()
     {
-        Target target = new Target();
+        Target target = new();
         Traverse traverse = Traverse.Create(target);
 
         TraverseUtils.SetValueIfValidated(ref traverse, "Value", 42, value => value > 0);
@@ -148,10 +148,10 @@ public sealed class ValidationTests
     [Fact]
     public void MultipleTraversalRestrictionsShortCircuitInOrder()
     {
-        Target target = new Target();
-        List<int> order = new List<int>();
-        List<Func<int, bool>> validations = new List<Func<int, bool>>
-        {
+        Target target = new();
+        List<int> order = [];
+        List<Func<int, bool>> validations =
+        [
             value =>
             {
                 order.Add(1);
@@ -167,7 +167,7 @@ public sealed class ValidationTests
                 order.Add(3);
                 return true;
             }
-        };
+        ];
 
         TraverseUtils.SetValueIfValidated(ref target, "Value", 42, validations);
 
@@ -182,8 +182,8 @@ public sealed class ValidationTests
             RuntimeHelpers.RunClassConstructor(typeof(ModLog).TypeHandle);
             ManualLogSource source = Logger.Sources.OfType<ManualLogSource>()
                 .Single(item => item.SourceName == "Unknown mod");
-            List<LogEventArgs> events = new List<LogEventArgs>();
-            EventHandler<LogEventArgs> handler = (_, logEvent) => events.Add(logEvent);
+            List<LogEventArgs> events = [];
+            void handler(object? _, LogEventArgs logEvent) => events.Add(logEvent);
             source.LogEvent += handler;
             try
             {
@@ -200,7 +200,7 @@ public sealed class ValidationTests
 
     private sealed class Target
     {
-        private int Value = 0;
+        private readonly int Value = 0;
 
         internal int CurrentValue
         {

@@ -31,7 +31,7 @@ public sealed class AnimationConstructorValidationTests
     public void AnimationConstructorAggregatesSpriteAndDurationFailuresInOrder()
     {
         ArgumentException exception = Assert.Throws<ArgumentException>(() =>
-            new AnimationInfo(" \t", new Sprite[] { null!, null! }, float.NaN));
+            new AnimationInfo(" \t", [null!, null!], float.NaN));
 
         Assert.Equal(
             "An animation name cannot be whitespace." + Environment.NewLine
@@ -60,7 +60,7 @@ public sealed class AnimationConstructorValidationTests
     public void ConstructorsDistinguishEmptyAndWhitespaceStrings()
     {
         ArgumentException emptyAnimation = Assert.Throws<ArgumentException>(() =>
-            new AnimationInfo("", new Sprite[0], 0));
+            new AnimationInfo("", [], 0));
         Assert.Equal(
             "An animation name cannot be empty." + Environment.NewLine
             + "An animation must contain at least one frame." + Environment.NewLine
@@ -101,7 +101,7 @@ public sealed class AnimationConstructorValidationTests
         List<LogEventArgs> logs = ValidationTests.CaptureUnknownModErrors(() =>
         {
             Assert.Throws<ArgumentException>(() =>
-                new AnimationInfo(" ", new Sprite[] { null! }, -1));
+                new AnimationInfo(" ", [null!], -1));
             Assert.Throws<ArgumentException>(() =>
                 new AnimationImportInfo(" ", " ", -1, -1, -1));
         });
@@ -113,9 +113,9 @@ public sealed class AnimationConstructorValidationTests
     [Fact]
     public void SuccessfulImportConstructorPreservesInputsAndAcceptsPositiveInfinity()
     {
-        string name = new string(new[] { ' ', 'i', 'm', 'p', 'o', 'r', 't', ' ' });
-        string filePath = new string(new[] { ' ', 'a', '.', 'p', 'n', 'g', ' ' });
-        AnimationImportInfo import = new AnimationImportInfo(name, filePath, 16, 32, float.PositiveInfinity);
+        string name = new([' ', 'i', 'm', 'p', 'o', 'r', 't', ' ']);
+        string filePath = new([' ', 'a', '.', 'p', 'n', 'g', ' ']);
+        AnimationImportInfo import = new(name, filePath, 16, 32, float.PositiveInfinity);
         Assert.Same(name, import.Name);
         Assert.Same(filePath, import.FilePath);
         Assert.Equal(16, import.Width);

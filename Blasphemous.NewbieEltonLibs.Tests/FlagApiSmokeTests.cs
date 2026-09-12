@@ -133,8 +133,10 @@ internal static class FlagApiSmokeTests
         Assert(ModFlagAdapter.TryGet(events, registration.VanillaId, out bool storedFalse));
         Assert(!storedFalse);
 
-        Dictionary<string, FlagObject> restoredFlags = new();
-        restoredFlags[registration.VanillaId] = CreateFlag(true, true);
+        Dictionary<string, FlagObject> restoredFlags = new()
+        {
+            [registration.VanillaId] = CreateFlag(true, true)
+        };
         TraverseUtils.SetValue(ref events, "flags", restoredFlags);
         Assert(registry.TryGet(typeof(OwnerMod), "Lifecycle.Mod", "slot flag", out _));
         Assert(ModFlagAdapter.TryGet(events, registration.VanillaId, out bool restoredValue));
@@ -171,7 +173,7 @@ internal static class FlagApiSmokeTests
     {
         PropertyInfo property = typeof(Blasphemous.ModdingAPI.Helpers.ModHelper).GetProperty("LoadedMods", BindingFlags.Static | BindingFlags.Public)!;
         MethodInfo setter = property.GetSetMethod(true)!;
-        setter.Invoke(null, new object[] { mods });
+        setter.Invoke(null, [mods]);
     }
 
     private static void Assert(bool condition)

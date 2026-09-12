@@ -14,7 +14,7 @@ public sealed class CheatConsoleCommandCoverageTests
     [Fact]
     public void AttributeCommandsRegisterAliasesAndCustomCommands()
     {
-        CommandUnderTest command = new CommandUnderTest();
+        CommandUnderTest command = new();
         Dictionary<string, Action<string[]>> commands = command.Build();
 
         Assert.True(command.UppercaseAllowed);
@@ -24,12 +24,12 @@ public sealed class CheatConsoleCommandCoverageTests
         Assert.Contains("custom", commands.Keys);
         Assert.DoesNotContain("ALPHA", commands.Keys);
 
-        string[] parameters = { "value" };
+        string[] parameters = ["value"];
         commands["alpha"](parameters);
         Assert.Same(parameters, command.LastParameters);
         commands["a"](parameters);
         Assert.Same(parameters, command.LastParameters);
-        commands["custom"](Array.Empty<string>());
+        commands["custom"]([]);
         Assert.True(command.CustomCommandCalled);
     }
 
@@ -37,10 +37,10 @@ public sealed class CheatConsoleCommandCoverageTests
     [Fact]
     public void DeclaredParameterLengthsAllowMatchingCalls()
     {
-        CommandUnderTest command = new CommandUnderTest();
+        CommandUnderTest command = new();
         Dictionary<string, Action<string[]>> commands = command.Build();
 
-        string[] parameters = { "one", "two" };
+        string[] parameters = ["one", "two"];
         commands["counted"](parameters);
 
         Assert.Same(parameters, command.LastParameters);
@@ -60,7 +60,7 @@ public sealed class CheatConsoleCommandCoverageTests
     [Fact]
     public void ModSubCommandAttributeExposesValues()
     {
-        ModSubCommandAttribute attribute = new ModSubCommandAttribute(
+        ModSubCommandAttribute attribute = new(
             "inspect",
             "inspect values",
             "[name]",
@@ -70,9 +70,9 @@ public sealed class CheatConsoleCommandCoverageTests
         Assert.Equal("inspect", attribute.Name);
         Assert.Equal("inspect values", attribute.Description);
         Assert.Equal("[name]", attribute.Usage);
-        Assert.Equal(new[] { 0, 2 }, attribute.ValidLengths);
+        Assert.Equal([0, 2], attribute.ValidLengths);
 
-        ModSubCommandAttribute fallback = new ModSubCommandAttribute("fallback", "fallback command");
+        ModSubCommandAttribute fallback = new("fallback", "fallback command");
         Assert.Null(fallback.Usage);
     }
 
@@ -80,9 +80,9 @@ public sealed class CheatConsoleCommandCoverageTests
     [Fact]
     public void ValidateParameterListAcceptsMatchingLength()
     {
-        CommandUnderTest command = new CommandUnderTest();
+        CommandUnderTest command = new();
 
-        Assert.True(command.ValidateParameters(new[] { "one" }, 1));
+        Assert.True(command.ValidateParameters(["one"], 1));
     }
 
     private sealed class CommandUnderTest : AutoModCommand
@@ -112,7 +112,7 @@ public sealed class CheatConsoleCommandCoverageTests
             LastParameters = parameters;
         }
 
-        [ModSubCommand("counted", "counted command", validLengths: new[] { 2 })]
+        [ModSubCommand("counted", "counted command", validLengths: [2])]
         private void Counted(string[] parameters)
         {
             LastParameters = parameters;

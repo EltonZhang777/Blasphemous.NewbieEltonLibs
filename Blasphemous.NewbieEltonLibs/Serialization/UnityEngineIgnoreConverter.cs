@@ -1,7 +1,7 @@
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json;
 using UnityEngine;
 
 namespace Blasphemous.NewbieEltonLibs.Serialization;
@@ -12,14 +12,14 @@ namespace Blasphemous.NewbieEltonLibs.Serialization;
 public class UnityEngineIgnoreConverter : JsonConverter
 {
     private static readonly Type[] DefaultIgnoredTypes =
-    {
+    [
         typeof(GameObject),
         typeof(Transform),
         typeof(Texture),
         typeof(Sprite),
         typeof(UnityEngine.UI.Image),
         typeof(Material)
-    };
+    ];
 
     private readonly bool _ignoreAllUnityObjects;
     private readonly bool _includeDerivedTypes;
@@ -40,7 +40,7 @@ public class UnityEngineIgnoreConverter : JsonConverter
     public UnityEngineIgnoreConverter(bool ignoreAllUnityObjects)
     {
         _ignoreAllUnityObjects = ignoreAllUnityObjects;
-        _ignoredTypes = ignoreAllUnityObjects ? new Type[0] : (Type[])DefaultIgnoredTypes.Clone();
+        _ignoredTypes = ignoreAllUnityObjects ? [] : (Type[])DefaultIgnoredTypes.Clone();
     }
 
     /// <summary>
@@ -53,9 +53,7 @@ public class UnityEngineIgnoreConverter : JsonConverter
             throw new ArgumentNullException(nameof(ignoredTypes));
 
         _includeDerivedTypes = true;
-        _ignoredTypes = ignoredTypes
-            .Where(type => type != null && typeof(UnityEngine.Object).IsAssignableFrom(type))
-            .ToArray();
+        _ignoredTypes = [.. ignoredTypes.Where(type => type != null && typeof(UnityEngine.Object).IsAssignableFrom(type))];
     }
 
     /// <summary>

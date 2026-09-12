@@ -1,6 +1,6 @@
+using Blasphemous.NewbieEltonLibs.Extensions.System;
 using System;
 using System.Collections.Generic;
-using Blasphemous.NewbieEltonLibs.Extensions.System;
 
 namespace Blasphemous.NewbieEltonLibs.Storage;
 
@@ -9,7 +9,7 @@ namespace Blasphemous.NewbieEltonLibs.Storage;
 /// </summary>
 public class AnimationStorage
 {
-    private readonly Dictionary<string, AnimationInfo> _animations = new Dictionary<string, AnimationInfo>();
+    private readonly Dictionary<string, AnimationInfo> _animations = [];
 
     /// <summary>
     /// Creates an empty animation registry.
@@ -28,8 +28,7 @@ public class AnimationStorage
     {
         get
         {
-            AnimationInfo? animation;
-            if (_animations.TryGetValue(name, out animation))
+            if (_animations.TryGetValue(name, out AnimationInfo? animation))
             {
                 return animation;
             }

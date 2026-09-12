@@ -16,7 +16,7 @@ public sealed class StorageCoverageTests
     [Fact]
     public void AnimationInfoRetainsFramesAndTiming()
     {
-        Sprite[] sprites = { null!, null! };
+        Sprite[] sprites = [null!, null!];
 
         AnimationInfo animation = (AnimationInfo)RuntimeHelpers.GetUninitializedObject(typeof(AnimationInfo));
         TraverseUtils.SetValue(ref animation, "<Name>k__BackingField", "idle");
@@ -36,7 +36,7 @@ public sealed class StorageCoverageTests
     public void AnimationInfoRejectsInvalidDuration(float secondsPerFrame)
     {
         ArgumentException exception = Assert.Throws<ArgumentException>(() =>
-            new AnimationInfo("idle", new Sprite[] { null! }, secondsPerFrame));
+            new AnimationInfo("idle", [null!], secondsPerFrame));
         Assert.Contains("Frame duration must be positive.", exception.Message);
     }
 
@@ -45,20 +45,20 @@ public sealed class StorageCoverageTests
     public void AnimationInfoRejectsMissingNameAndFrames()
     {
         Assert.Throws<ArgumentException>(() =>
-            new AnimationInfo(null!, Array.Empty<Sprite>(), 1f));
+            new AnimationInfo(null!, [], 1f));
         Assert.Throws<ArgumentException>(() =>
-            new AnimationInfo(string.Empty, Array.Empty<Sprite>(), 1f));
+            new AnimationInfo(string.Empty, [], 1f));
         Assert.Throws<ArgumentException>(() =>
             new AnimationInfo("idle", null!, 1f));
         Assert.Throws<ArgumentException>(() =>
-            new AnimationInfo("idle", Array.Empty<Sprite>(), 1f));
+            new AnimationInfo("idle", [], 1f));
     }
 
     /// <summary>Verifies animation import data exposes its validated values.</summary>
     [Fact]
     public void AnimationImportInfoRetainsValues()
     {
-        AnimationImportInfo import = new AnimationImportInfo("idle", "sprites/idle.png", 16, 24, 0.2f);
+        AnimationImportInfo import = new("idle", "sprites/idle.png", 16, 24, 0.2f);
 
         Assert.Equal("idle", import.Name);
         Assert.Equal("sprites/idle.png", import.FilePath);
@@ -84,7 +84,7 @@ public sealed class StorageCoverageTests
     [Fact]
     public void SpriteImportInfoUsesDocumentedDefaults()
     {
-        SpriteImportInfo import = new SpriteImportInfo();
+        SpriteImportInfo import = new();
 
         Assert.Equal(string.Empty, import.Name);
         Assert.Equal(32, import.PixelsPerUnit);
@@ -103,7 +103,7 @@ public sealed class StorageCoverageTests
     [Fact]
     public void AnimationStorageSupportsRegisterReplaceAndTryOperations()
     {
-        AnimationStorage storage = new AnimationStorage();
+        AnimationStorage storage = new();
         AnimationInfo first = CreateAnimation("idle");
         AnimationInfo replacement = CreateAnimation("idle");
         AnimationInfo other = CreateAnimation("walk");
@@ -130,8 +130,8 @@ public sealed class StorageCoverageTests
     [Fact]
     public void AnimationStorageInstancesAreIndependent()
     {
-        AnimationStorage first = new AnimationStorage();
-        AnimationStorage second = new AnimationStorage();
+        AnimationStorage first = new();
+        AnimationStorage second = new();
 
         first.Register(CreateAnimation("shared-name"));
 
@@ -143,7 +143,7 @@ public sealed class StorageCoverageTests
     [Fact]
     public void SpriteStorageExposesRegistrationOperations()
     {
-        SpriteStorage storage = new SpriteStorage();
+        SpriteStorage storage = new();
         Assert.NotNull(typeof(SpriteStorage).GetMethod(nameof(SpriteStorage.Register)));
         Assert.NotNull(typeof(SpriteStorage).GetMethod(nameof(SpriteStorage.Replace)));
         Assert.NotNull(typeof(SpriteStorage).GetMethod(nameof(SpriteStorage.TryRegister)));
@@ -160,8 +160,8 @@ public sealed class StorageCoverageTests
     [Fact]
     public void SpriteStorageInstancesStartIndependent()
     {
-        SpriteStorage first = new SpriteStorage();
-        SpriteStorage second = new SpriteStorage();
+        SpriteStorage first = new();
+        SpriteStorage second = new();
 
         Assert.False(first.TryGet("shared-name", out _));
         Assert.False(second.TryGet("shared-name", out _));

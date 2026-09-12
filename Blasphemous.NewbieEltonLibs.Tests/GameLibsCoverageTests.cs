@@ -59,7 +59,7 @@ public sealed class GameLibsCoverageTests
     [Fact]
     public void TraverseUtilitiesRespectAccessModesAndValidation()
     {
-        Fixture fixture = new Fixture();
+        Fixture fixture = new();
 
         Assert.Equal(1, TraverseUtils.GetValue<int>(fixture, "_field"));
         Assert.Equal("initial", TraverseUtils.GetValue<string>(fixture, "Property", TraverseUtils.TraverseAccessType.Property));
@@ -77,7 +77,7 @@ public sealed class GameLibsCoverageTests
         TraverseUtils.SetValue(ref traverse, "_field", 4);
         Assert.Equal(4, TraverseUtils.GetValue<int>(traverse, "_field"));
 
-        List<Func<int, bool>> validators = new List<Func<int, bool>> { value => value > 4 };
+        List<Func<int, bool>> validators = [value => value > 4];
         TraverseUtils.SetValueIfValidated(ref fixture, "_field", 5, validators);
         Assert.Equal(5, TraverseUtils.GetValue<int>(fixture, "_field"));
 
@@ -132,7 +132,7 @@ public sealed class GameLibsCoverageTests
 
     private sealed class Fixture
     {
-        private int _field = 1;
+        private readonly int _field = 1;
 
         private string Property { get; set; } = "initial";
 

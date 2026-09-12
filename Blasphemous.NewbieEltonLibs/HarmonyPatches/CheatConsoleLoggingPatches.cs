@@ -24,7 +24,7 @@ internal static class ConsoleWidget_Submit_CheatConsoleInput_Patch
     }
 }
 
-[HarmonyPatch(typeof(ConsoleWidget), "Write", new[] { typeof(string) })]
+[HarmonyPatch(typeof(ConsoleWidget), "Write", [typeof(string)])]
 internal static class ConsoleWidget_Write_CheatConsoleOutput_Patch
 {
     [HarmonyPostfix]

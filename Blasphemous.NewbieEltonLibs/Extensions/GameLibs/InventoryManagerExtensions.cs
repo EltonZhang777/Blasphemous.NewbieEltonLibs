@@ -50,22 +50,16 @@ public static class InventoryManagerExtensions
     /// </summary>
     public static List<T>? GetAllInventoryObjectsOfType<T>(this InventoryManager inventoryManager) where T : BaseInventoryObject
     {
-        switch (typeof(T))
+        return typeof(T) switch
         {
-            case Type t when t == typeof(Relic):
-                return inventoryManager.GetAllRelics().OfType<T>().ToList();
-            case Type t when t == typeof(RosaryBead):
-                return inventoryManager.GetAllRosaryBeads().OfType<T>().ToList();
-            case Type t when t == typeof(QuestItem):
-                return inventoryManager.GetAllQuestItems().OfType<T>().ToList();
-            case Type t when t == typeof(Prayer):
-                return inventoryManager.GetAllPrayers().OfType<T>().ToList();
-            case Type t when t == typeof(BlasCollectibleItem):
-                return inventoryManager.GetAllCollectibleItems().OfType<T>().ToList();
-            case Type t when t == typeof(Sword):
-                return inventoryManager.GetAllSwords().OfType<T>().ToList();
-        }
-        return null;
+            Type t when t == typeof(Relic) => [.. inventoryManager.GetAllRelics().OfType<T>()],
+            Type t when t == typeof(RosaryBead) => [.. inventoryManager.GetAllRosaryBeads().OfType<T>()],
+            Type t when t == typeof(QuestItem) => [.. inventoryManager.GetAllQuestItems().OfType<T>()],
+            Type t when t == typeof(Prayer) => [.. inventoryManager.GetAllPrayers().OfType<T>()],
+            Type t when t == typeof(BlasCollectibleItem) => [.. inventoryManager.GetAllCollectibleItems().OfType<T>()],
+            Type t when t == typeof(Sword) => [.. inventoryManager.GetAllSwords().OfType<T>()],
+            _ => null,
+        };
     }
 
     /// <summary>
@@ -73,22 +67,16 @@ public static class InventoryManagerExtensions
     /// </summary>
     public static List<BaseInventoryObject>? GetAllInventoryObjectsOfType(this InventoryManager inventoryManager, ItemType itemType)
     {
-        switch (itemType)
+        return itemType switch
         {
-            case ItemType.Relic:
-                return inventoryManager.GetAllRelics().Select(x => x as BaseInventoryObject).ToList();
-            case ItemType.Bead:
-                return inventoryManager.GetAllRosaryBeads().Select(x => x as BaseInventoryObject).ToList();
-            case ItemType.Quest:
-                return inventoryManager.GetAllQuestItems().Select(x => x as BaseInventoryObject).ToList();
-            case ItemType.Prayer:
-                return inventoryManager.GetAllPrayers().Select(x => x as BaseInventoryObject).ToList();
-            case ItemType.Collectible:
-                return inventoryManager.GetAllCollectibleItems().Select(x => x as BaseInventoryObject).ToList();
-            case ItemType.Sword:
-                return inventoryManager.GetAllSwords().Select(x => x as BaseInventoryObject).ToList();
-        }
-        return null;
+            ItemType.Relic => [.. inventoryManager.GetAllRelics().Select(x => x as BaseInventoryObject)],
+            ItemType.Bead => [.. inventoryManager.GetAllRosaryBeads().Select(x => x as BaseInventoryObject)],
+            ItemType.Quest => [.. inventoryManager.GetAllQuestItems().Select(x => x as BaseInventoryObject)],
+            ItemType.Prayer => [.. inventoryManager.GetAllPrayers().Select(x => x as BaseInventoryObject)],
+            ItemType.Collectible => [.. inventoryManager.GetAllCollectibleItems().Select(x => x as BaseInventoryObject)],
+            ItemType.Sword => [.. inventoryManager.GetAllSwords().Select(x => x as BaseInventoryObject)],
+            _ => null,
+        };
     }
 
     /// <summary>
@@ -96,22 +84,16 @@ public static class InventoryManagerExtensions
     /// </summary>
     public static List<T>? GetOwnedInventoryObjectsOfType<T>(this InventoryManager inventoryManager) where T : BaseInventoryObject
     {
-        switch (typeof(T))
+        return typeof(T) switch
         {
-            case Type t when t == typeof(Relic):
-                return inventoryManager.GetRelicsOwned().OfType<T>().ToList();
-            case Type t when t == typeof(RosaryBead):
-                return inventoryManager.GetRosaryBeadOwned().OfType<T>().ToList();
-            case Type t when t == typeof(QuestItem):
-                return inventoryManager.GetQuestItemOwned().OfType<T>().ToList();
-            case Type t when t == typeof(Prayer):
-                return inventoryManager.GetPrayersOwned().OfType<T>().ToList();
-            case Type t when t == typeof(BlasCollectibleItem):
-                return inventoryManager.GetCollectibleItemOwned().OfType<T>().ToList();
-            case Type t when t == typeof(Sword):
-                return inventoryManager.GetSwordsOwned().OfType<T>().ToList();
-        }
-        return null;
+            Type t when t == typeof(Relic) => [.. inventoryManager.GetRelicsOwned().OfType<T>()],
+            Type t when t == typeof(RosaryBead) => [.. inventoryManager.GetRosaryBeadOwned().OfType<T>()],
+            Type t when t == typeof(QuestItem) => [.. inventoryManager.GetQuestItemOwned().OfType<T>()],
+            Type t when t == typeof(Prayer) => [.. inventoryManager.GetPrayersOwned().OfType<T>()],
+            Type t when t == typeof(BlasCollectibleItem) => [.. inventoryManager.GetCollectibleItemOwned().OfType<T>()],
+            Type t when t == typeof(Sword) => [.. inventoryManager.GetSwordsOwned().OfType<T>()],
+            _ => null,
+        };
     }
 
     /// <summary>
@@ -119,22 +101,16 @@ public static class InventoryManagerExtensions
     /// </summary>
     public static List<BaseInventoryObject>? GetOwnedInventoryObjectsOfType(this InventoryManager inventoryManager, ItemType itemType)
     {
-        switch (itemType)
+        return itemType switch
         {
-            case ItemType.Relic:
-                return inventoryManager.GetRelicsOwned().Select(x => x as BaseInventoryObject).ToList();
-            case ItemType.Bead:
-                return inventoryManager.GetRosaryBeadOwned().Select(x => x as BaseInventoryObject).ToList();
-            case ItemType.Quest:
-                return inventoryManager.GetQuestItemOwned().Select(x => x as BaseInventoryObject).ToList();
-            case ItemType.Prayer:
-                return inventoryManager.GetPrayersOwned().Select(x => x as BaseInventoryObject).ToList();
-            case ItemType.Collectible:
-                return inventoryManager.GetCollectibleItemOwned().Select(x => x as BaseInventoryObject).ToList();
-            case ItemType.Sword:
-                return inventoryManager.GetSwordsOwned().Select(x => x as BaseInventoryObject).ToList();
-        }
-        return null;
+            ItemType.Relic => [.. inventoryManager.GetRelicsOwned().Select(x => x as BaseInventoryObject)],
+            ItemType.Bead => [.. inventoryManager.GetRosaryBeadOwned().Select(x => x as BaseInventoryObject)],
+            ItemType.Quest => [.. inventoryManager.GetQuestItemOwned().Select(x => x as BaseInventoryObject)],
+            ItemType.Prayer => [.. inventoryManager.GetPrayersOwned().Select(x => x as BaseInventoryObject)],
+            ItemType.Collectible => [.. inventoryManager.GetCollectibleItemOwned().Select(x => x as BaseInventoryObject)],
+            ItemType.Sword => [.. inventoryManager.GetSwordsOwned().Select(x => x as BaseInventoryObject)],
+            _ => null,
+        };
     }
 
     /// <summary>

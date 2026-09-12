@@ -1,6 +1,6 @@
+using Blasphemous.NewbieEltonLibs.Extensions.System;
 using System;
 using System.Text;
-using Blasphemous.NewbieEltonLibs.Extensions.System;
 using UnityEngine;
 
 namespace Blasphemous.NewbieEltonLibs.Storage;
@@ -19,7 +19,7 @@ public class AnimationInfo
     /// <exception cref="ArgumentException">Thrown when any argument is invalid.</exception>
     public AnimationInfo(string name, Sprite[] sprites, float secondsPerFrame)
     {
-        StringBuilder errorMessage = new StringBuilder();
+        StringBuilder errorMessage = new();
 
         if (!ValidationUtils.Validate(name, value => value != null, logToModLog: false, throwError: false))
         {
@@ -46,7 +46,7 @@ public class AnimationInfo
         {
             for (int index = 0; index < sprites.Length; index++)
             {
-                if (!ValidationUtils.Validate(sprites[index], value => !ReferenceEquals(value, null) && value != null, logToModLog: false, throwError: false))
+                if (!ValidationUtils.Validate(sprites[index], value => value is not null && value != null, logToModLog: false, throwError: false))
                 {
                     AppendError(errorMessage, "An animation sprite at index " + index + " cannot be null.");
                 }
