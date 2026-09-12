@@ -15,7 +15,8 @@ internal sealed class ModFlagRegistry
 
         if (_registrations.TryGetValue(vanillaId, out ModFlagInfo existing))
         {
-            if (existing.ModType == modType && existing.ModId == modId && existing.PreserveInNewGamePlus == preserveInNewGamePlus)
+            if (IsSameOwner(existing, modType, modId) &&
+                existing.PreserveInNewGamePlus == preserveInNewGamePlus)
             {
                 registration = existing;
                 return true;
@@ -38,11 +39,17 @@ internal sealed class ModFlagRegistry
         if (!_registrations.TryGetValue(vanillaId, out ModFlagInfo candidate))
             return false;
 
-        if (candidate.ModType != modType || candidate.ModId != modId)
+        if (!IsSameOwner(candidate, modType, modId))
             return false;
 
         registration = candidate;
         return true;
+    }
+
+    private static bool IsSameOwner(ModFlagInfo registration, Type modType, string modId)
+    {
+        return registration.ModType == modType &&
+            ModFlagsManager.FormatToFlagId(registration.ModId) == ModFlagsManager.FormatToFlagId(modId);
     }
 
     internal static bool TryCreateVanillaId(string? modId, string? localName, out string vanillaId)
@@ -51,7 +58,7 @@ internal sealed class ModFlagRegistry
         if (IsNullOrWhiteSpace(modId) || IsNullOrWhiteSpace(localName))
             return false;
 
-        vanillaId = (modId + ":" + localName).Replace(' ', '_').ToUpper();
+        vanillaId = ModFlagsManager.FormatToFlagId(modId + ":" + localName);
         return true;
     }
 
