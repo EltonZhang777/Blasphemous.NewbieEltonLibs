@@ -34,7 +34,7 @@ public abstract class AutoModCommand : ModCommand
         List<SubCommandInfo> infos = [];
 
         // 1. scan attribute-declared sub-commands
-        foreach (MethodInfo method in GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+        foreach (MethodInfo method in GetType().GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
         {
             object[] attributes = method.GetCustomAttributes(typeof(ModSubCommandAttribute), false);
             if (attributes.Length == 0)
