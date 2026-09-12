@@ -11,12 +11,32 @@ internal static class FlagApiSmokeTests
 {
     internal static void Run()
     {
+        VerifyPublicFormatterContract();
         VerifyRegistrationContract();
         VerifyPublicOwnershipContract();
         VerifyCallingAssemblyContract();
         VerifyVanillaAdapterContract();
         VerifyLifecycleContract();
         Console.WriteLine("Flag API smoke test passed.");
+    }
+
+    private static void VerifyPublicFormatterContract()
+    {
+        Assert(ModFlagsManager.FormatToFlagId("Example.Mod:flag name") == "EXAMPLE.MOD:FLAG_NAME");
+        Assert(ModFlagsManager.FormatToFlagId("mod-id:flag-name/other") == "MOD-ID:FLAG-NAME/OTHER");
+        Assert(ModFlagsManager.FormatToFlagId(string.Empty) == string.Empty);
+
+        bool threwForNull = false;
+        try
+        {
+            ModFlagsManager.FormatToFlagId(null!);
+        }
+        catch (ArgumentNullException)
+        {
+            threwForNull = true;
+        }
+
+        Assert(threwForNull);
     }
 
     private static void VerifyRegistrationContract()
@@ -27,15 +47,23 @@ internal static class FlagApiSmokeTests
 
         Assert(ModFlagRegistry.TryCreateVanillaId("Example.Mod", "flag name", out string vanillaId));
         Assert(vanillaId == "EXAMPLE.MOD:FLAG_NAME");
+        Assert(ModFlagRegistry.TryCreateVanillaId("Example.Mod", "flag-name/other", out vanillaId));
+        Assert(vanillaId == "EXAMPLE.MOD:FLAG-NAME/OTHER");
+        Assert(!ModFlagRegistry.TryCreateVanillaId(null, "flag", out _));
+        Assert(!ModFlagRegistry.TryCreateVanillaId("mod", null, out _));
+        Assert(!ModFlagRegistry.TryCreateVanillaId(string.Empty, "flag", out _));
+        Assert(!ModFlagRegistry.TryCreateVanillaId("mod", string.Empty, out _));
         Assert(!ModFlagRegistry.TryCreateVanillaId(" ", "flag", out _));
         Assert(!ModFlagRegistry.TryCreateVanillaId("mod", " ", out _));
 
         Assert(registry.TryRegister(ownerType, "Example.Mod", "flag name", false, out ModFlagInfo? registration));
         Assert(registration != null && registration.VanillaId == "EXAMPLE.MOD:FLAG_NAME");
+        Assert(registration != null && registration.ModId == "Example.Mod");
         Assert(registration != null && !registration.PreserveInNewGamePlus);
-        Assert(registry.TryRegister(ownerType, "Example.Mod", "FLAG_NAME", false, out _));
-        Assert(!registry.TryRegister(ownerType, "Example.Mod", "flag name", true, out _));
-        Assert(registry.TryGet(ownerType, "Example.Mod", "flag name", out _));
+        Assert(registry.TryRegister(ownerType, "example.mod", "FLAG_NAME", false, out _));
+        Assert(!registry.TryRegister(ownerType, "example.mod", "flag name", true, out _));
+        Assert(!registry.TryRegister(otherType, "example.mod", "FLAG_NAME", false, out _));
+        Assert(registry.TryGet(ownerType, "example.mod", "flag name", out _));
         Assert(!registry.TryGet(otherType, "Other.Mod", "flag name", out _));
     }
 

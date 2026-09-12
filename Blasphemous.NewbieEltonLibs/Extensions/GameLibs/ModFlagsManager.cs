@@ -16,6 +16,20 @@ public static class ModFlagsManager
     private static readonly ModFlagRegistry _registry = new();
 
     /// <summary>
+    /// Formats a complete vanilla flag identifier using the vanilla event system's rules.
+    /// </summary>
+    /// <param name="flagId">The complete vanilla flag identifier.</param>
+    /// <returns>The identifier with ASCII spaces replaced by underscores and converted to uppercase.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="flagId"/> is <see langword="null"/>.</exception>
+    public static string FormatToFlagId(string flagId)
+    {
+        if (flagId == null)
+            throw new ArgumentNullException(nameof(flagId));
+
+        return flagId.Replace(' ', '_').ToUpper();
+    }
+
+    /// <summary>
     /// Registers a local flag name for the uniquely loaded mod represented by <paramref name="modType"/>.
     /// </summary>
     /// <param name="localName">The mod-local flag name.</param>
