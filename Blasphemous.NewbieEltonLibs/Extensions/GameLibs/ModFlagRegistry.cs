@@ -51,7 +51,7 @@ internal sealed class ModFlagRegistry
         if (IsNullOrWhiteSpace(modId) || IsNullOrWhiteSpace(localName))
             return false;
 
-        vanillaId = (modId + ":" + localName).Replace(' ', '_').ToUpper();
+        vanillaId = ModFlagsManager.FormatToFlagId(modId + ":" + localName);
         return true;
     }
 

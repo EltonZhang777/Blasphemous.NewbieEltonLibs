@@ -185,7 +185,8 @@ public static class TraverseUtils
     /// </summary>
     public static bool Validate<T>(T obj, Func<T, bool> validate, bool throwError = false)
     {
-        if (!validate(obj))
+        bool isValid = validate(obj);
+        if (!isValid)
         {
             string errorMessage = $"`{obj}` of type `{typeof(T)}` isn't a valid argument";
             ArgumentException exception = new(errorMessage);
@@ -193,6 +194,6 @@ public static class TraverseUtils
             if (throwError)
                 throw exception;
         }
-        return validate(obj);
+        return isValid;
     }
 }

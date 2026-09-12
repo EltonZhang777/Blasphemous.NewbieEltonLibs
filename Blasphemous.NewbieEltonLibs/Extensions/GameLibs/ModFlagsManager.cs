@@ -16,6 +16,22 @@ public static class ModFlagsManager
     private static readonly ModFlagRegistry _registry = new();
 
     /// <summary>
+    /// Formats a complete vanilla flag ID using the game's normalization rules.
+    /// </summary>
+    /// <param name="flagId">The complete flag ID to format.</param>
+    /// <returns>The formatted flag ID.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="flagId" /> is null.</exception>
+    public static string FormatToFlagId(string flagId)
+    {
+        if (flagId == null)
+        {
+            throw new ArgumentNullException(nameof(flagId));
+        }
+
+        return flagId.Replace(' ', '_').ToUpper();
+    }
+
+    /// <summary>
     /// Registers a local flag name for the uniquely loaded mod represented by <paramref name="modType"/>.
     /// </summary>
     /// <param name="localName">The mod-local flag name.</param>

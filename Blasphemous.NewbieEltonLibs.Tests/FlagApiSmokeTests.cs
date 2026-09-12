@@ -34,6 +34,7 @@ internal static class FlagApiSmokeTests
         Assert(registration != null && registration.VanillaId == "EXAMPLE.MOD:FLAG_NAME");
         Assert(registration != null && !registration.PreserveInNewGamePlus);
         Assert(registry.TryRegister(ownerType, "Example.Mod", "FLAG_NAME", false, out _));
+        Assert(!registry.TryRegister(otherType, "Example.Mod", "flag name", false, out _));
         Assert(!registry.TryRegister(ownerType, "Example.Mod", "flag name", true, out _));
         Assert(registry.TryGet(ownerType, "Example.Mod", "flag name", out _));
         Assert(!registry.TryGet(otherType, "Other.Mod", "flag name", out _));
