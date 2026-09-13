@@ -4,147 +4,142 @@ using Framework.Managers;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Xunit;
 
 namespace Blasphemous.NewbieEltonLibs.Tests;
 
-internal static class FlagApiSmokeTests
+/// <summary>Verifies the Flag API smoke scenarios through xUnit discovery.</summary>
+public sealed class FlagApiSmokeTests
 {
-    internal static void Run()
+    /// <summary>Verifies the public formatter contract and null handling.</summary>
+    [Fact]
+    public void VerifyPublicFormatterContract()
     {
-        VerifyPublicFormatterContract();
-        VerifyRegistrationContract();
-        VerifyPublicOwnershipContract();
-        VerifyCallingAssemblyContract();
-        VerifyVanillaAdapterContract();
-        VerifyLifecycleContract();
-        Console.WriteLine("Flag API smoke test passed.");
+        Assert.Equal("EXAMPLE.MOD:FLAG_NAME", ModFlagsManager.FormatToFlagId("Example.Mod:flag name"));
+        Assert.Equal("MOD-ID:FLAG-NAME/OTHER", ModFlagsManager.FormatToFlagId("mod-id:flag-name/other"));
+        Assert.Equal(string.Empty, ModFlagsManager.FormatToFlagId(string.Empty));
+        Assert.Throws<ArgumentNullException>(() => ModFlagsManager.FormatToFlagId(null!));
     }
 
-    private static void VerifyPublicFormatterContract()
-    {
-        Assert(ModFlagsManager.FormatToFlagId("Example.Mod:flag name") == "EXAMPLE.MOD:FLAG_NAME");
-        Assert(ModFlagsManager.FormatToFlagId("mod-id:flag-name/other") == "MOD-ID:FLAG-NAME/OTHER");
-        Assert(ModFlagsManager.FormatToFlagId(string.Empty) == string.Empty);
-
-        bool threwForNull = false;
-        try
-        {
-            ModFlagsManager.FormatToFlagId(null!);
-        }
-        catch (ArgumentNullException)
-        {
-            threwForNull = true;
-        }
-
-        Assert(threwForNull);
-    }
-
-    private static void VerifyRegistrationContract()
+    /// <summary>Verifies registry validation, ownership, and canonical registration IDs.</summary>
+    [Fact]
+    public void VerifyRegistrationContract()
     {
         ModFlagRegistry registry = new();
         Type ownerType = typeof(OwnerMod);
         Type otherType = typeof(OtherMod);
 
-        Assert(ModFlagRegistry.TryCreateVanillaId("Example.Mod", "flag name", out string vanillaId));
-        Assert(vanillaId == "EXAMPLE.MOD:FLAG_NAME");
-        Assert(ModFlagRegistry.TryCreateVanillaId("Example.Mod", "flag-name/other", out vanillaId));
-        Assert(vanillaId == "EXAMPLE.MOD:FLAG-NAME/OTHER");
-        Assert(!ModFlagRegistry.TryCreateVanillaId(null, "flag", out _));
-        Assert(!ModFlagRegistry.TryCreateVanillaId("mod", null, out _));
-        Assert(!ModFlagRegistry.TryCreateVanillaId(string.Empty, "flag", out _));
-        Assert(!ModFlagRegistry.TryCreateVanillaId("mod", string.Empty, out _));
-        Assert(!ModFlagRegistry.TryCreateVanillaId(" ", "flag", out _));
-        Assert(!ModFlagRegistry.TryCreateVanillaId("mod", " ", out _));
+        Assert.True(ModFlagRegistry.TryCreateVanillaId("Example.Mod", "flag name", out string vanillaId));
+        Assert.Equal("EXAMPLE.MOD:FLAG_NAME", vanillaId);
+        Assert.True(ModFlagRegistry.TryCreateVanillaId("Example.Mod", "flag-name/other", out vanillaId));
+        Assert.Equal("EXAMPLE.MOD:FLAG-NAME/OTHER", vanillaId);
+        Assert.False(ModFlagRegistry.TryCreateVanillaId(null, "flag", out _));
+        Assert.False(ModFlagRegistry.TryCreateVanillaId("mod", null, out _));
+        Assert.False(ModFlagRegistry.TryCreateVanillaId(string.Empty, "flag", out _));
+        Assert.False(ModFlagRegistry.TryCreateVanillaId("mod", string.Empty, out _));
+        Assert.False(ModFlagRegistry.TryCreateVanillaId(" ", "flag", out _));
+        Assert.False(ModFlagRegistry.TryCreateVanillaId("mod", " ", out _));
 
-        Assert(registry.TryRegister(ownerType, "Example.Mod", "flag name", false, out ModFlagInfo? registration));
-        Assert(registration != null && registration.VanillaId == "EXAMPLE.MOD:FLAG_NAME");
-        Assert(registration != null && registration.ModId == "Example.Mod");
-        Assert(registration != null && !registration.PreserveInNewGamePlus);
-        Assert(registry.TryRegister(ownerType, "example.mod", "FLAG_NAME", false, out _));
-        Assert(!registry.TryRegister(ownerType, "example.mod", "flag name", true, out _));
-        Assert(!registry.TryRegister(otherType, "example.mod", "FLAG_NAME", false, out _));
-        Assert(registry.TryGet(ownerType, "example.mod", "flag name", out _));
-        Assert(!registry.TryGet(otherType, "Other.Mod", "flag name", out _));
+        Assert.True(registry.TryRegister(ownerType, "Example.Mod", "flag name", false, out ModFlagInfo? registration));
+        Assert.NotNull(registration);
+        Assert.Equal("EXAMPLE.MOD:FLAG_NAME", registration!.VanillaId);
+        Assert.Equal("Example.Mod", registration.ModId);
+        Assert.False(registration.PreserveInNewGamePlus);
+        Assert.True(registry.TryRegister(ownerType, "example.mod", "FLAG_NAME", false, out _));
+        Assert.False(registry.TryRegister(ownerType, "example.mod", "flag name", true, out _));
+        Assert.False(registry.TryRegister(otherType, "example.mod", "FLAG_NAME", false, out _));
+        Assert.True(registry.TryGet(ownerType, "example.mod", "flag name", out _));
+        Assert.False(registry.TryGet(otherType, "Other.Mod", "flag name", out _));
     }
 
-    private static void VerifyPublicOwnershipContract()
+    /// <summary>Verifies public flag registration and ownership enforcement.</summary>
+    [Fact]
+    public void VerifyPublicOwnershipContract()
     {
         OwnerMod owner = CreateUninitializedMod<OwnerMod>("Example.Mod");
         OtherMod other = CreateUninitializedMod<OtherMod>("Other.Mod");
         SetLoadedMods(owner, other);
 
-        Assert(ModFlagsManager.RegisterFlag("public", typeof(OwnerMod), true));
-        Assert(ModFlagsManager.RegisterFlag("public", typeof(OwnerMod), true));
-        Assert(!ModFlagsManager.RegisterFlag("public", typeof(OwnerMod), false));
-        Assert(!ModFlagsManager.TrySetFlag("public", typeof(OtherMod), false));
-        Assert(!ModFlagsManager.TryGetFlag("public", typeof(OtherMod), out _));
-        Assert(!ModFlagsManager.TrySetFlag("EXAMPLE.MOD:PUBLIC", typeof(OwnerMod), false));
+        Assert.True(ModFlagsManager.RegisterFlag("public", typeof(OwnerMod), true));
+        Assert.True(ModFlagsManager.RegisterFlag("public", typeof(OwnerMod), true));
+        Assert.False(ModFlagsManager.RegisterFlag("public", typeof(OwnerMod), false));
+        Assert.False(ModFlagsManager.TrySetFlag("public", typeof(OtherMod), false));
+        Assert.False(ModFlagsManager.TryGetFlag("public", typeof(OtherMod), out _));
+        Assert.False(ModFlagsManager.TrySetFlag("EXAMPLE.MOD:PUBLIC", typeof(OwnerMod), false));
     }
 
-    private static void VerifyCallingAssemblyContract()
+    /// <summary>Verifies calling-assembly fallback and ambiguity handling.</summary>
+    [Fact]
+    public void VerifyCallingAssemblyContract()
     {
         OwnerMod owner = CreateUninitializedMod<OwnerMod>("Fallback.Mod");
         OtherMod other = CreateUninitializedMod<OtherMod>("Other.Mod");
 
         SetLoadedMods(owner, other);
-        Assert(ModFlagsManager.RegisterFlag("explicit-precedence", typeof(OwnerMod)));
+        Assert.True(ModFlagsManager.RegisterFlag("explicit-precedence", typeof(OwnerMod)));
 
         SetLoadedMods(owner);
-        Assert(ModFlagsManager.RegisterFlag("fallback-single"));
-        Assert(ModFlagsManager.RegisterFlag("fallback-single", typeof(OwnerMod)));
+        Assert.True(ModFlagsManager.RegisterFlag("fallback-single"));
+        Assert.True(ModFlagsManager.RegisterFlag("fallback-single", typeof(OwnerMod)));
 
         SetLoadedMods(owner, other);
-        Assert(!ModFlagsManager.RegisterFlag("fallback-ambiguous"));
+        Assert.False(ModFlagsManager.RegisterFlag("fallback-ambiguous"));
 
         Type externalModType = typeof(BlasMod).Assembly.GetType("Blasphemous.ModdingAPI.ModdingAPI")!;
         BlasMod externalMod = (BlasMod)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(externalModType);
         SetLoadedMods(externalMod);
-        Assert(!ModFlagsManager.RegisterFlag("fallback-no-match"));
+        Assert.False(ModFlagsManager.RegisterFlag("fallback-no-match"));
     }
 
-    private static void VerifyVanillaAdapterContract()
+    /// <summary>Verifies vanilla adapter reads preserve stored false and NG+ state.</summary>
+    [Fact]
+    public void VerifyVanillaAdapterContract()
     {
         EventManager events = CreateEvents();
         Dictionary<string, FlagObject> flags = TraverseUtils.GetValue<Dictionary<string, FlagObject>>(events, "flags")!;
 
-        Assert(!ModFlagAdapter.TryGet(events, "example.mod:missing", out _));
+        Assert.False(ModFlagAdapter.TryGet(events, "example.mod:missing", out _));
         FlagObject storedFalse = CreateFlag(false, false);
         flags["EXAMPLE.MOD:STORED_FALSE"] = storedFalse;
-        Assert(ModFlagAdapter.TryGet(events, "Example.Mod:stored false", out bool storedValue));
-        Assert(!storedValue);
+        Assert.True(ModFlagAdapter.TryGet(events, "Example.Mod:stored false", out bool storedValue));
+        Assert.False(storedValue);
 
         FlagObject preserved = CreateFlag(true, true);
         flags["EXAMPLE.MOD:PRESERVED"] = preserved;
-        Assert(ModFlagAdapter.TryGet(events, "Example.Mod:preserved", out bool preservedValue));
-        Assert(preservedValue && flags["EXAMPLE.MOD:PRESERVED"].preserveInNewGamePlus);
+        Assert.True(ModFlagAdapter.TryGet(events, "Example.Mod:preserved", out bool preservedValue));
+        Assert.True(preservedValue);
+        Assert.True(flags["EXAMPLE.MOD:PRESERVED"].preserveInNewGamePlus);
     }
 
-    private static void VerifyLifecycleContract()
+    /// <summary>Verifies registered flags survive vanilla state replacement and reset.</summary>
+    [Fact]
+    public void VerifyLifecycleContract()
     {
         ModFlagRegistry registry = new();
-        Assert(registry.TryRegister(typeof(OwnerMod), "Lifecycle.Mod", "slot flag", true, out ModFlagInfo? registration));
-        Assert(registration != null && registration.PreserveInNewGamePlus);
+        Assert.True(registry.TryRegister(typeof(OwnerMod), "Lifecycle.Mod", "slot flag", true, out ModFlagInfo? registration));
+        Assert.NotNull(registration);
+        Assert.True(registration!.PreserveInNewGamePlus);
 
         EventManager events = CreateEvents();
         Dictionary<string, FlagObject> flags = TraverseUtils.GetValue<Dictionary<string, FlagObject>>(events, "flags")!;
-        Assert(!ModFlagAdapter.TryGet(events, registration!.VanillaId, out _));
+        Assert.False(ModFlagAdapter.TryGet(events, registration.VanillaId, out _));
 
         flags[registration.VanillaId] = CreateFlag(false, true);
-        Assert(ModFlagAdapter.TryGet(events, registration.VanillaId, out bool storedFalse));
-        Assert(!storedFalse);
+        Assert.True(ModFlagAdapter.TryGet(events, registration.VanillaId, out bool storedFalse));
+        Assert.False(storedFalse);
 
         Dictionary<string, FlagObject> restoredFlags = new()
         {
             [registration.VanillaId] = CreateFlag(true, true)
         };
         TraverseUtils.SetValue(ref events, "flags", restoredFlags);
-        Assert(registry.TryGet(typeof(OwnerMod), "Lifecycle.Mod", "slot flag", out _));
-        Assert(ModFlagAdapter.TryGet(events, registration.VanillaId, out bool restoredValue));
-        Assert(restoredValue);
+        Assert.True(registry.TryGet(typeof(OwnerMod), "Lifecycle.Mod", "slot flag", out _));
+        Assert.True(ModFlagAdapter.TryGet(events, registration.VanillaId, out bool restoredValue));
+        Assert.True(restoredValue);
 
         restoredFlags[registration.VanillaId].value = false;
-        Assert(ModFlagAdapter.TryGet(events, registration.VanillaId, out bool resetValue));
-        Assert(!resetValue);
+        Assert.True(ModFlagAdapter.TryGet(events, registration.VanillaId, out bool resetValue));
+        Assert.False(resetValue);
     }
 
     private static EventManager CreateEvents()
@@ -174,12 +169,6 @@ internal static class FlagApiSmokeTests
         PropertyInfo property = typeof(Blasphemous.ModdingAPI.Helpers.ModHelper).GetProperty("LoadedMods", BindingFlags.Static | BindingFlags.Public)!;
         MethodInfo setter = property.GetSetMethod(true)!;
         setter.Invoke(null, [mods]);
-    }
-
-    private static void Assert(bool condition)
-    {
-        if (!condition)
-            throw new InvalidOperationException("Flag API smoke test assertion failed.");
     }
 
     private sealed class OwnerMod : BlasMod
