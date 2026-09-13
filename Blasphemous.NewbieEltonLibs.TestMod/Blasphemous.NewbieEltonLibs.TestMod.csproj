@@ -31,13 +31,16 @@
     <PackageReference Include="Blasphemous.ModdingAPI" Version="3.0.1" />
     <PackageReference Include="Blasphemous.CheatConsole" Version="1.1.0" />
     <PackageReference Include="Blasphemous.Framework.Levels" Version="0.1.4" />
+    <LocalizationFiles Include="$(MSBuildProjectDirectory)\resources\localization\**\*.*" />
   </ItemGroup>
 
   <Target Name="PackageTestMod" AfterTargets="Build">
     <RemoveDir Directories="$(PackageRoot)" />
     <MakeDir Directories="$(PackageRoot)\plugins" />
+    <MakeDir Directories="$(PackageRoot)\localization" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PackageRoot)\plugins" />
     <Copy SourceFiles="$(ProductionLibraryPath)" DestinationFolder="$(PackageRoot)\plugins" />
+    <Copy SourceFiles="@(LocalizationFiles)" DestinationFolder="$(PackageRoot)\localization" />
   </Target>
 
 </Project>

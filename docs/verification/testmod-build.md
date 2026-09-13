@@ -2,11 +2,12 @@
 
 `Blasphemous.NewbieEltonLibs.TestMod` is an external net35 consumer. Its
 Debug build consumes the production library built in Release and packages only
-the two project-owned plugin assemblies:
+the project-owned plugin assemblies plus its localization resource:
 
 ```text
 publish/NewbieEltonLibsTestMod/plugins/NewbieEltonLibsTestMod.dll
 publish/NewbieEltonLibsTestMod/plugins/Blasphemous.NewbieEltonLibs.dll
+publish/NewbieEltonLibsTestMod/localization/Newbie Elton Libraries Test Mod.txt
 ```
 
 GameLibs 4.0.67, ModdingAPI 3.0.1, CheatConsole 1.1.0, and Framework.Levels

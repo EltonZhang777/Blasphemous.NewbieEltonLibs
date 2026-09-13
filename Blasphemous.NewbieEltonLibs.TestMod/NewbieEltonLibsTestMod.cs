@@ -1,14 +1,19 @@
 using Blasphemous.CheatConsole;
 using Blasphemous.ModdingAPI;
+using Blasphemous.ModdingAPI.Input;
 using Blasphemous.NewbieEltonLibs.Components;
 using Blasphemous.NewbieEltonLibs.Extensions.GameLibs;
+using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Blasphemous.NewbieEltonLibs.TestMod;
 
 internal sealed class NewbieEltonLibsTestMod : BlasMod
 {
+    internal const string TestKeybinding = "s4_test_action";
+
     private ModAnimator? _trackedAnimator;
     private SpriteRenderer? _trackedRenderer;
     private Sprite[]? _trackedFrames;
@@ -21,6 +26,11 @@ internal sealed class NewbieEltonLibsTestMod : BlasMod
 
     protected override void OnInitialize()
     {
+        InputHandler.RegisterDefaultKeybindings(new Dictionary<string, KeyCode>
+        {
+            [TestKeybinding] = KeyCode.F8
+        });
+        LocalizationHandler.RegisterDefaultLanguage("en");
         RegisterVerificationFlags();
         ModLog.Info($"[{ModInfo.ModId}] MOD_INITIALIZED", this);
     }
@@ -47,6 +57,12 @@ internal sealed class NewbieEltonLibsTestMod : BlasMod
 
     protected override void OnUpdate()
     {
+        int axisEdge = InputHandler.GetAxisDown(AxisCode.MoveHorizontal, true);
+        if (axisEdge != 0)
+        {
+            Log($"S4|input-axis|edge={axisEdge}");
+        }
+
         if (_trackedRenderer == null || _trackedFrames == null)
         {
             return;

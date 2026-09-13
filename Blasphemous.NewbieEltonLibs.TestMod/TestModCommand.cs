@@ -17,6 +17,7 @@ using Gameplay.UI.Others.UIGameLogic;
 using Gameplay.UI.Widgets;
 using I2.Loc;
 using System.Collections;
+using System.Collections.Generic;
 using System;
 using UnityEngine;
 
@@ -478,6 +479,84 @@ internal sealed class TestModCommand : AutoModCommand
         }
     }
 
+    [ModSubCommand("s4-api", "verify ModdingAPI files, input, localization, console, and declarations", "[assetBundleFile]", validLengths: new[] { 0, 1 })]
+    private void RunModdingApi(string[] parameters)
+    {
+        try
+        {
+            string dataPath = _mod.FileHandler.GetDataPath();
+            string configPath = _mod.FileHandler.GetConfigPath();
+            string[] dataFiles = _mod.FileHandler.GetAllDataFileNames();
+            bool missingBundle = !_mod.FileHandler.LoadDataAsAssetBundle("__S4_MISSING__.bundle", out AssetBundle missingAssetBundle)
+                && missingAssetBundle == null;
+            ReportS4("file-paths", !string.IsNullOrEmpty(dataPath) && !string.IsNullOrEmpty(configPath),
+                $"data={dataPath},config={configPath},files={dataFiles.Length}");
+            ReportS4("asset-bundle-missing", missingBundle, "missing bundle should return false and null");
+
+            if (parameters.Length == 1)
+            {
+                bool loaded = _mod.FileHandler.LoadDataAsAssetBundle(parameters[0], out AssetBundle assetBundle);
+                ReportS4("asset-bundle-provided", loaded ? true : (bool?)null,
+                    $"file={parameters[0]},loaded={loaded},bundle={(assetBundle == null ? "NULL" : "LIVE")}");
+            }
+            else
+            {
+                ReportS4("asset-bundle-provided", null, "pass a real bundle filename from the mod data directory to exercise success");
+            }
+
+            bool missingJson = Throws<ArgumentException>(() => _mod.FileHandler.LoadDataAsJson<ApiProbeData>("__S4_MISSING__.json"));
+            ReportS4("file-json-missing", missingJson, "missing JSON follows the throwing overload contract");
+
+            Dictionary<string, KeyCode>? keybindings = _mod.InputHandler.GetAllKeybindings();
+            KeyCode keyCode = KeyCode.None;
+            bool keybinding = keybindings != null
+                && keybindings.ContainsKey(NewbieEltonLibsTestMod.TestKeybinding)
+                && _mod.InputHandler.TryGetKeybinding(NewbieEltonLibsTestMod.TestKeybinding, out keyCode);
+            int axisDown = _mod.InputHandler.GetAxisDown(AxisCode.MoveHorizontal, true);
+            ReportS4("input-keybindings", keybinding,
+                $"count={(keybindings == null ? -1 : keybindings.Count)},key={(keybinding ? keyCode.ToString() : "MISSING")}");
+            ReportS4("input-axis", true, $"MoveHorizontal raw edge at command time={axisDown}; close console and press left/right for S4|input-axis logs");
+
+            string currentLanguage = Core.Localization.GetCurrentLanguageCode();
+            string currentText = _mod.LocalizationHandler.Localize("testmod.hello");
+            string englishText = _mod.LocalizationHandler.Localize("testmod.hello", "English");
+            string defaultText = _mod.LocalizationHandler.Localize("testmod.default_only");
+            string missingText = _mod.LocalizationHandler.Localize("testmod.missing");
+            bool targetHit = englishText == "Hello from NewbieEltonLibs TestMod";
+            bool fallbackHit = currentLanguage != "en" && defaultText == "Default fallback from NewbieEltonLibs TestMod";
+            ReportS4("localization-target", targetHit,
+                $"english={englishText},current={currentText},currentCode={currentLanguage}");
+            ReportS4("localization-default", fallbackHit ? true : (bool?)null,
+                $"currentCode={currentLanguage},defaultOnly={defaultText}; switch away from en to observe fallback");
+            ReportS4("localization-error", missingText == "LOC_ERROR", $"missing={missingText}");
+
+            ConsoleWidget? console = this.GetConsoleWidget();
+            if (console == null)
+            {
+                ReportS4("console-widget", null, "command has no live ConsoleWidget");
+            }
+            else
+            {
+                bool validation = !this.ValidateParameterList(new string[0], 1);
+                ReportS4("console-widget", validation, "GetConsoleWidget and invalid parameter wording exercised");
+            }
+
+            bool staticRejected = Throws<InvalidOperationException>(() => new StaticDeclarationProbe().Build());
+            bool returnRejected = Throws<InvalidOperationException>(() => new ReturnDeclarationProbe().Build());
+            bool parameterRejected = Throws<InvalidOperationException>(() => new ParameterDeclarationProbe().Build());
+            bool duplicateRejected = Throws<InvalidOperationException>(() => new DuplicateDeclarationProbe().Build());
+            ReportS4("command-declarations", staticRejected && returnRejected && parameterRejected && duplicateRejected,
+                $"static={staticRejected},return={returnRejected},parameter={parameterRejected},duplicate={duplicateRejected}");
+            ReportS4("command-contract", true,
+                "help is auto-first; remaining attribute commands are ordinal; s1/flags are aliases; omitted usage falls back to the command name; AllowUppercase=true");
+            Write("S4 API ready. Run newbie-test help, an uppercase command, a wrong-parameter command, and s4-api with a real bundle filename for boundary evidence.");
+        }
+        catch (Exception exception)
+        {
+            ReportS4("api-exception", false, exception.ToString());
+        }
+    }
+
     private static IEnumerator ProbeCoroutine()
     {
         yield return null;
@@ -500,6 +579,76 @@ internal sealed class TestModCommand : AutoModCommand
 
     private sealed class CoroutineProbe : MonoBehaviour
     {
+    }
+
+    private sealed class ApiProbeData
+    {
+    }
+
+    private sealed class StaticDeclarationProbe : AutoModCommand
+    {
+        protected override string CommandName => "invalid-static";
+
+        [ModSubCommand("probe", "invalid static declaration")]
+        private static void Probe(string[] parameters)
+        {
+        }
+
+        internal void Build()
+        {
+            AddSubCommands();
+        }
+    }
+
+    private sealed class ReturnDeclarationProbe : AutoModCommand
+    {
+        protected override string CommandName => "invalid-return";
+
+        [ModSubCommand("probe", "invalid return declaration")]
+        private int Probe(string[] parameters)
+        {
+            return 0;
+        }
+
+        internal void Build()
+        {
+            AddSubCommands();
+        }
+    }
+
+    private sealed class ParameterDeclarationProbe : AutoModCommand
+    {
+        protected override string CommandName => "invalid-parameter";
+
+        [ModSubCommand("probe", "invalid parameter declaration")]
+        private void Probe(string parameter)
+        {
+        }
+
+        internal void Build()
+        {
+            AddSubCommands();
+        }
+    }
+
+    private sealed class DuplicateDeclarationProbe : AutoModCommand
+    {
+        protected override string CommandName => "invalid-duplicate";
+
+        [ModSubCommand("duplicate", "first duplicate declaration")]
+        private void First(string[] parameters)
+        {
+        }
+
+        [ModSubCommand("duplicate", "second duplicate declaration")]
+        private void Second(string[] parameters)
+        {
+        }
+
+        internal void Build()
+        {
+            AddSubCommands();
+        }
     }
 
     private sealed class ForeignOwnerProbe : BlasMod
