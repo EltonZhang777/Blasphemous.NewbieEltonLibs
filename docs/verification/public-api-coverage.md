@@ -55,4 +55,5 @@ than being reported as passed:
 
 The real-game results should be appended here by the manual verifier; no broad
 Unity simulator, upstream modification, or duplicated vanilla persistence is
-part of this coverage change.
+part of this coverage change. The reproducible issue packet is
+[`issue-49-evidence.md`](issue-49-evidence.md).
