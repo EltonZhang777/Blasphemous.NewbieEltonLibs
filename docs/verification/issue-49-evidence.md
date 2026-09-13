@@ -59,13 +59,31 @@ files. The follow-up recorded the following additional evidence:
   `PASS`; layout was `BLOCKED` before the inventory was open and `PASS` with
   `Layout_Normal` in the two inventory-open checks.
 
+Tracked evidence-completion session `1dd747af4c064ac59ca9a9ef1a2f564f` used
+the same worktree, loaded the TestMod, reached `ready`, and was stopped and
+cleaned safely. It additionally recorded:
+
+- `s2-programmatic` `PASS`, including `PROGRAMMATIC_OUTPUT` and no nested
+  player-input record.
+- Independent input/output toggles taking effect immediately: input-off
+  suppressed the following input record while output remained visible, and
+  output-off suppressed the following output record while input remained
+  recorded. Both channels were restored successfully.
+- Three inventory checks with `S4|inventory-layout|PASS|layout=Layout_Normal`
+  and all filter, prefix, lookup, and selection checks passing. The user
+  supplied `Screenshot (55).png` showing the usable inventory UI.
+- `s4-api` non-bundle probes passing. `asset-bundle-provided` remained
+  `BLOCKED` without a bundle; `localization-default` was `BLOCKED` only
+  because this run was still in English, while the earlier Chinese/Spanish
+  fallback run passed.
+
 | Slice | Actual result from captured logs/evidence | Current status |
 | --- | --- | --- |
 | S1 flags | Ownership, absent/stored-false, stored values, vanilla mutation, and stale-owner probes passed. NG+ recorded `S1|NEW_GAME|preserved=True|transient=False`; subsequent load/exit records preserved the expected values. | Functional pass; #52 can close; packet link consolidation remains in #57 |
-| S2 console | Sessions `8bebb70...` and `bf30f5...` cover nonblank input/output, configuration, validation, whitespace suppression, and visible output. `NEWBIE-TEST HELP` is expected to be unknown under the accepted case-sensitive policy. | Functional pass; programmatic/toggle screenshot evidence remains for #53 |
+| S2 console | Sessions `8bebb70...`, `bf30f5...`, and `1dd747...` cover nonblank input/output, configuration, validation, whitespace suppression, visible output, programmatic processing, and immediate independent toggles. `NEWBIE-TEST HELP` is expected to be unknown under the accepted case-sensitive policy. | Functional pass; accessible S2 console artifact remains for #53 |
 | S3 resources | The user-provided screenshot confirms the first animation continued while the second execution was stopped. Earlier captured logs covered storage, timing, validation, and caller-owned resource behavior. | Functional pass; #54 can close; artifact linkage remains in #57 |
-| S4 Unity/GameLibs | Live `ElderBrother` and `PietyMonster` owner/target checks passed; no-live-object cases were correctly `BLOCKED`; UI Boss and I2 checks passed. The follow-up also passed the Unity helper and inventory checks in and around the open inventory UI. | Functional pass; representative GUI artifact remains for #55/#57 |
-| S4 ModdingAPI/commands | No `api-exception`; file paths, missing JSON, input, localization target/error, Chinese/Spanish fallback, console widget, declarations, and command contract passed. The uppercase policy conforms to the accepted case-sensitive sub-command rule. Bundle success was unavailable and is deferred as non-blocking. | Functional pass; representative GUI artifact remains for #56/#57 |
+| S4 Unity/GameLibs | Live `ElderBrother` and `PietyMonster` owner/target checks passed; no-live-object cases were correctly `BLOCKED`; UI Boss and I2 checks passed. The follow-up passed the Unity helper and inventory checks in and around the open inventory UI, and the user supplied an inventory screenshot. | Functional pass; #55 can close; packet link remains in #57 |
+| S4 ModdingAPI/commands | No `api-exception`; file paths, missing JSON, input, localization target/error, Chinese/Spanish fallback, console widget, declarations, and command contract passed. The uppercase policy conforms to the accepted case-sensitive sub-command rule. The latest run also passed all non-bundle probes. Bundle success was unavailable and is deferred as non-blocking. | Functional pass; accessible API artifact remains for #56/#57 |
 
 ### Localization test-text interpretation
 
@@ -102,10 +120,11 @@ follow-up.
    inventory-open checks pass with `Layout_Normal`.
 4. Remaining work is evidence-only unless a stricter artifact requirement is
    desired:
-   - run `newbie-test s2-programmatic` and capture the console/log boundary for
-     the missing independent programmatic-command proof;
-   - attach or link representative S2, S4 Unity/GameLibs, and S4 API
-     screenshots/recordings for #53, #55, #56, and #57;
+   - attach or link a representative S2 console screenshot/recording for #53;
+   - attach or link a representative S4 API/command screenshot/recording for
+     #56;
+   - use the supplied inventory screenshot for #55 and consolidate all links
+     in #57;
    - retain the existing bundle-success deferral as non-blocking.
 
 The package contains only these TestMod-owned files:
@@ -121,15 +140,16 @@ publish/NewbieEltonLibsTestMod/localization/Newbie Elton Libraries Test Mod.txt
 | Slice | Implementation commit | In-game command(s) | Expected evidence | Actual result | Status |
 | --- | --- | --- | --- | --- | --- |
 | S1 flags | `6ed42a4` | `newbie-test s1` / `flags` | owner-only access, absent vs stored false, vanilla mutation, both NG+ policies, lifecycle markers | Session `8bebb70...`; all probes passed and NG+/load/exit markers recorded | Pass; #52 ready to close |
-| S2 console | `5d1a565` | `s2-gating`, `s2-input`, `s2-output`, `s2-write`, `s2-programmatic` | one input/output record per boundary line, whitespace suppression, immediate independent toggles, Debug gate, `Unknown mod` fallback | Sessions `8bebb70...`/`bf30f5...`; whitespace and visible write pass; programmatic proof not rerun in follow-up | Functional pass; #53 remains open for programmatic/artifact evidence |
+| S2 console | `5d1a565` | `s2-gating`, `s2-input`, `s2-output`, `s2-write`, `s2-programmatic` | one input/output record per boundary line, whitespace suppression, immediate independent toggles, Debug gate, `Unknown mod` fallback | Session `1dd747...` adds programmatic `PASS`, independent toggle results, whitespace and visible-write evidence | Functional pass; #53 remains open for accessible console artifact |
 | S3 resources | `22b9cb2` | `newbie-test s3`, `s3-stop` | storage isolation and Try/throw contracts, first frame, duration, null stop, frame order showing known last-frame skip | Earlier session logs plus user `Screenshot (46).png`; first animation continued while second stopped | Pass; #54 ready to close |
-| S4 Unity/GameLibs | `54bd0a7` | `s4-unity`, `s4-live`, `s4-inventory` | real Unity helpers and live enemy/Boss/UI/I2/inventory objects | Sessions `8bebb70...`/`bf30f5...`; live bosses, Unity helpers, and inventory checks passed; scene-dependent checks classified | Functional pass; #55 remains open for artifact evidence |
-| S4 ModdingAPI/commands | `1b077ac` | `s4-api`, `help` and invalid-parameter commands | file/bundle, input/axis, localization, console, command declaration evidence | Session `8bebb70...`; all non-bundle probes passed; bundle success explicitly deferred | Functional pass; #56 remains open for artifact evidence |
+| S4 Unity/GameLibs | `54bd0a7` | `s4-unity`, `s4-live`, `s4-inventory` | real Unity helpers and live enemy/Boss/UI/I2/inventory objects | Sessions `8bebb70...`/`1dd747...`; live checks, Unity helpers, and inventory checks passed; user supplied `Screenshot (55).png`; scene-dependent checks classified | Pass; #55 ready to close |
+| S4 ModdingAPI/commands | `1b077ac` | `s4-api`, `help` and invalid-parameter commands | file/bundle, input/axis, localization, console, command declaration evidence | Sessions `8bebb70...`/`1dd747...`; all non-bundle probes passed; bundle success explicitly deferred; current-English fallback is scene/language-dependent | Functional pass; #56 remains open for API artifact evidence |
 
 For each row, retain the tracked session id, game version, plugin list, exact
 steps, expected/actual text, and bounded log excerpts. The remaining issue
-blocker is the absence of accessible screenshot/recording links for S2 and S4,
-plus the unrerun `s2-programmatic` boundary proof; no product `FAIL` is open.
+blocker is the absence of accessible screenshot/recording links for S2 and
+S4 API evidence; `s2-programmatic` is now verified and no product `FAIL` is
+open.
 
 ## Manual run contract
 
