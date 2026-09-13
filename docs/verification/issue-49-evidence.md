@@ -41,10 +41,10 @@ removed no new files.
 | Slice | Actual result from captured logs/evidence | Current status |
 | --- | --- | --- |
 | S1 flags | Ownership, absent/stored-false, stored values, vanilla mutation, and stale-owner probes passed. NG+ recorded `S1|NEW_GAME|preserved=True|transient=False`; subsequent load/exit records preserved the expected values. | Functional pass; evidence consolidation pending |
-| S2 console | Input/output configuration, visible writes, valid `Info` level, and missing-parameter validation passed. `NEWBIE-TEST HELP` returned `Command unknown`; whitespace-only input has no reliable input record. | Follow-up required |
+| S2 console | Input/output configuration, visible writes, valid `Info` level, and missing-parameter validation passed. `NEWBIE-TEST HELP` returned `Command unknown`, which conforms to the accepted case-sensitive sub-command policy; whitespace-only input has no reliable input record. | Whitespace/evidence follow-up required |
 | S3 resources | The user-provided screenshot confirms the first animation continued while the second execution was stopped. Earlier captured logs covered storage, timing, validation, and caller-owned resource behavior. | Pass with prior evidence; consolidation pending |
 | S4 Unity/GameLibs | Live `ElderBrother` and `PietyMonster` owner/target checks passed; no-live-object cases were correctly `BLOCKED`; UI Boss and I2 checks passed. Inventory checks passed in an earlier run but were not repeated in the final session. | Functional pass with scene/evidence gaps |
-| S4 ModdingAPI/commands | No `api-exception`; file paths, missing JSON, input, localization target/error, Chinese/Spanish fallback, console widget, declarations, and command contract passed. Bundle success was unavailable and is now deferred as non-blocking. | Functional pass except uppercase-help mismatch; bundle success deferred |
+| S4 ModdingAPI/commands | No `api-exception`; file paths, missing JSON, input, localization target/error, Chinese/Spanish fallback, console widget, declarations, and command contract passed. The uppercase policy conforms to the accepted case-sensitive sub-command rule. Bundle success was unavailable and is now deferred as non-blocking. | Functional pass; bundle success deferred |
 
 ### Localization test-text interpretation
 
@@ -74,13 +74,17 @@ follow-up.
 The next tracked run must cover only the following gaps. Do not repeat S3
 unless a same-session screenshot is required.
 
-1. **Uppercase help policy**
-   - Input: `NEWBIE-TEST HELP`.
-   - Expected GUI: the Cheat Console displays the normal `newbie-test` help
-     list, with `help` first and the remaining commands in ordinal/name order.
-   - Record the exact visible output. The current actual output was
-     `Command unknown, use newbie-test help`; this is the item requiring a
-     fix or an explicit policy decision.
+1. **Uppercase policy confirmation (no code fix)**
+   - Input: `newbie-test help`, then `NEWBIE-TEST HELP` if a same-session
+     screenshot is desired.
+   - Expected GUI: the lower-case command displays the normal `newbie-test`
+     help list, with `help` first and the remaining commands in ordinal/name
+     order. The upper-case sub-command is expected to display
+     `Command unknown, use newbie-test help`, because sub-command names are
+     case-sensitive; `AllowUppercase=true` preserves uppercase characters in
+     declared names and does not enable case-insensitive matching.
+   - The current log already captures the upper-case result; no code change is
+     required unless the project deliberately changes this policy.
 
 2. **Whitespace suppression**
    - Submit a line containing spaces only.
