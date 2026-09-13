@@ -3,6 +3,7 @@ using Blasphemous.ModdingAPI;
 using Blasphemous.NewbieEltonLibs.CheatConsole;
 using Blasphemous.NewbieEltonLibs.Extensions.GameLibs;
 using Framework.Managers;
+using Gameplay.UI.Widgets;
 using System;
 
 namespace Blasphemous.NewbieEltonLibs.TestMod;
@@ -79,6 +80,112 @@ internal sealed class TestModCommand : AutoModCommand
         {
             Report("exception", false, exception.ToString());
         }
+    }
+
+    [ModSubCommand("s2-input", "enable or disable console input logging", "<on|off>", validLengths: new[] { 1 })]
+    private void ConfigureInputLogging(string[] parameters)
+    {
+        if (!TryParseToggle(parameters[0], out bool active))
+        {
+            ReportS2("input-config", false, "expected on or off");
+            return;
+        }
+
+        CheatConsoleLogging.LogCheatConsoleInput(active);
+        ReportS2("input-config", true, $"active={active},debugBuildOnly=true");
+    }
+
+    [ModSubCommand("s2-output", "enable or disable console output logging", "<on|off>", validLengths: new[] { 1 })]
+    private void ConfigureOutputLogging(string[] parameters)
+    {
+        if (!TryParseToggle(parameters[0], out bool active))
+        {
+            ReportS2("output-config", false, "expected on or off");
+            return;
+        }
+
+        CheatConsoleLogging.LogCheatConsoleOutput(active);
+        ReportS2("output-config", true, $"active={active},debugBuildOnly=true");
+    }
+
+    [ModSubCommand("s2-level", "set input or output log level", "<input|output> <level>", validLengths: new[] { 2 })]
+    private void ConfigureLoggingLevel(string[] parameters)
+    {
+        if (!Enum.IsDefined(typeof(LogLevel), parameters[1]))
+        {
+            ReportS2("level-config", false, $"unsupported level '{parameters[1]}'");
+            return;
+        }
+
+        LogLevel level = (LogLevel)Enum.Parse(typeof(LogLevel), parameters[1], true);
+        if (string.Equals(parameters[0], "input", StringComparison.OrdinalIgnoreCase))
+        {
+            CheatConsoleLogging.LogCheatConsoleInput(true, level);
+        }
+        else if (string.Equals(parameters[0], "output", StringComparison.OrdinalIgnoreCase))
+        {
+            CheatConsoleLogging.LogCheatConsoleOutput(true, level);
+        }
+        else
+        {
+            ReportS2("level-config", false, "expected input or output");
+            return;
+        }
+
+        ReportS2("level-config", true, $"channel={parameters[0]},level={level},active=true");
+    }
+
+    [ModSubCommand("s2-write", "write one visible console line", "<message>")]
+    private void WriteOutput(string[] parameters)
+    {
+        Write(string.Join(" ", parameters));
+    }
+
+    [ModSubCommand("s2-programmatic", "process a command without Submit", validLengths: new[] { 0 })]
+    private void ProcessProgrammatically(string[] parameters)
+    {
+        ConsoleWidget console = ConsoleWidget.Instance;
+        if (console == null)
+        {
+            ReportS2("programmatic", false, "ConsoleWidget.Instance is unavailable");
+            return;
+        }
+
+        console.ProcessCommand("newbie-test s2-write PROGRAMMATIC_OUTPUT");
+        ReportS2("programmatic", true, "ProcessCommand invoked; inspect input records for no nested player-input entry");
+    }
+
+    [ModSubCommand("s2-gating", "enable both channels with Debug caller gating", validLengths: new[] { 0 })]
+    private void EnableDebugGatedLogging(string[] parameters)
+    {
+        CheatConsoleLogging.LogCheatConsoleInput(true, LogLevel.Info, true);
+        CheatConsoleLogging.LogCheatConsoleOutput(true, LogLevel.Info, true);
+        ReportS2("debug-gating", true, "both channels configured with debugBuildOnly=true; this TestMod package is Debug");
+    }
+
+    private bool TryParseToggle(string value, out bool active)
+    {
+        if (string.Equals(value, "on", StringComparison.OrdinalIgnoreCase))
+        {
+            active = true;
+            return true;
+        }
+
+        if (string.Equals(value, "off", StringComparison.OrdinalIgnoreCase))
+        {
+            active = false;
+            return true;
+        }
+
+        active = false;
+        return false;
+    }
+
+    private void ReportS2(string check, bool passed, string detail)
+    {
+        string line = $"S2|{check}|{(passed ? "PASS" : "FAIL")}|{detail}";
+        _mod.Log(line);
+        Write(line);
     }
 
     private void Report(string check, bool passed, string detail)
