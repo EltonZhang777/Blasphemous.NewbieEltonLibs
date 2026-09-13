@@ -18,6 +18,9 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+
+    <PackageRoot>$(MSBuildProjectDirectory)\..\publish\$(TargetName)</PackageRoot>
+    <ProductionLibraryPath>$(MSBuildProjectDirectory)\..\Blasphemous.NewbieEltonLibs\bin\Release\net35\Blasphemous.NewbieEltonLibs.dll</ProductionLibraryPath>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,5 +32,12 @@
     <PackageReference Include="Blasphemous.CheatConsole" Version="1.1.0" />
     <PackageReference Include="Blasphemous.Framework.Levels" Version="0.1.4" />
   </ItemGroup>
+
+  <Target Name="PackageTestMod" AfterTargets="Build">
+    <RemoveDir Directories="$(PackageRoot)" />
+    <MakeDir Directories="$(PackageRoot)\plugins" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PackageRoot)\plugins" />
+    <Copy SourceFiles="$(ProductionLibraryPath)" DestinationFolder="$(PackageRoot)\plugins" />
+  </Target>
 
 </Project>
