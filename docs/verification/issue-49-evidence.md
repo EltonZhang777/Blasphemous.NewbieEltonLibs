@@ -1,9 +1,9 @@
 # Issue #49 real-game evidence packet
 
-Status: `PARTIALLY_VERIFIED_PENDING_APPROVED_FOLLOW_UP`
+Status: `PARTIALLY_VERIFIED_PENDING_EVIDENCE_LINKS`
 
-This packet records the TestMod implementation and the automated baseline. It
-Manual Unity/BepInEx claims are limited to the tracked-session results and
+This packet records the TestMod implementation and the automated baseline. The
+manual Unity/BepInEx claims are limited to the tracked-session results and
 bounded evidence recorded below.
 
 ## Session identity
@@ -31,6 +31,11 @@ bounded evidence recorded below.
 | Production-library behavior | No production-library source changed by #49 slices |
 | Parent issue #35 | Not modified or closed |
 
+The final automated gate was rerun against commit `4e592c7` on 2026-09-14:
+Release build succeeded with 0 errors (the existing 11 compatibility/
+obsolete warnings remain), xUnit passed `83/83`, and the external-consumer
+smoke printed `Flag API smoke test passed.`.
+
 ## Manual verification update
 
 Tracked session `8bebb70a34b94b5d9307b6c83e4201d6` deployed the patched TestMod,
@@ -38,13 +43,29 @@ loaded `NewbieEltonLibsTestMod`, reached `STARTUP_READY`, and was stopped and
 cleaned safely. Cleanup restored the three previously deployed files and
 removed no new files.
 
+Tracked follow-up session `bf30f5e7d4424f32881092e72418b8b4` used the same
+worktree at commit `4e592c7`, loaded the TestMod, and reached `ready`. It was
+stopped after manual verification and cleaned safely, restoring the same three
+files. The follow-up recorded the following additional evidence:
+
+- `s2-input on` and `s2-output on` both reported `PASS`.
+- A whitespace-only submission produced no `[CheatConsole Input]` record;
+  `newbie-test s2-write after-whitespace` then produced the expected visible
+  output. The console losing focus after the empty submission is inherited
+  from the game's `ConsoleWidget.Submit()` early return and is not a library
+  defect.
+- `newbie-test s4-unity` reported `S4|unity-helpers|PASS`.
+- `newbie-test s4-inventory` reported filter, prefix, lookup, and selection
+  `PASS`; layout was `BLOCKED` before the inventory was open and `PASS` with
+  `Layout_Normal` in the two inventory-open checks.
+
 | Slice | Actual result from captured logs/evidence | Current status |
 | --- | --- | --- |
-| S1 flags | Ownership, absent/stored-false, stored values, vanilla mutation, and stale-owner probes passed. NG+ recorded `S1|NEW_GAME|preserved=True|transient=False`; subsequent load/exit records preserved the expected values. | Functional pass; evidence consolidation pending |
-| S2 console | Input/output configuration, visible writes, valid `Info` level, and missing-parameter validation passed. `NEWBIE-TEST HELP` returned `Command unknown`, which conforms to the accepted case-sensitive sub-command policy; whitespace-only input has no reliable input record. | Whitespace/evidence follow-up required |
-| S3 resources | The user-provided screenshot confirms the first animation continued while the second execution was stopped. Earlier captured logs covered storage, timing, validation, and caller-owned resource behavior. | Pass with prior evidence; consolidation pending |
-| S4 Unity/GameLibs | Live `ElderBrother` and `PietyMonster` owner/target checks passed; no-live-object cases were correctly `BLOCKED`; UI Boss and I2 checks passed. Inventory checks passed in an earlier run but were not repeated in the final session. | Functional pass with scene/evidence gaps |
-| S4 ModdingAPI/commands | No `api-exception`; file paths, missing JSON, input, localization target/error, Chinese/Spanish fallback, console widget, declarations, and command contract passed. The uppercase policy conforms to the accepted case-sensitive sub-command rule. Bundle success was unavailable and is now deferred as non-blocking. | Functional pass; bundle success deferred |
+| S1 flags | Ownership, absent/stored-false, stored values, vanilla mutation, and stale-owner probes passed. NG+ recorded `S1|NEW_GAME|preserved=True|transient=False`; subsequent load/exit records preserved the expected values. | Functional pass; #52 can close; packet link consolidation remains in #57 |
+| S2 console | Sessions `8bebb70...` and `bf30f5...` cover nonblank input/output, configuration, validation, whitespace suppression, and visible output. `NEWBIE-TEST HELP` is expected to be unknown under the accepted case-sensitive policy. | Functional pass; programmatic/toggle screenshot evidence remains for #53 |
+| S3 resources | The user-provided screenshot confirms the first animation continued while the second execution was stopped. Earlier captured logs covered storage, timing, validation, and caller-owned resource behavior. | Functional pass; #54 can close; artifact linkage remains in #57 |
+| S4 Unity/GameLibs | Live `ElderBrother` and `PietyMonster` owner/target checks passed; no-live-object cases were correctly `BLOCKED`; UI Boss and I2 checks passed. The follow-up also passed the Unity helper and inventory checks in and around the open inventory UI. | Functional pass; representative GUI artifact remains for #55/#57 |
+| S4 ModdingAPI/commands | No `api-exception`; file paths, missing JSON, input, localization target/error, Chinese/Spanish fallback, console widget, declarations, and command contract passed. The uppercase policy conforms to the accepted case-sensitive sub-command rule. Bundle success was unavailable and is deferred as non-blocking. | Functional pass; representative GUI artifact remains for #56/#57 |
 
 ### Localization test-text interpretation
 
@@ -69,45 +90,23 @@ therefore explicitly **non-blocking and deferred**; do not hold #49 closure on
 it. If a valid bundle is added later, run that success path as a separate
 follow-up.
 
-### Approved follow-up real-game test plan
+### Follow-up results and remaining evidence
 
-The next tracked run must cover only the following gaps. Do not repeat S3
-unless a same-session screenshot is required.
-
-1. **Uppercase policy confirmation (no code fix)**
-   - Input: `newbie-test help`, then `NEWBIE-TEST HELP` if a same-session
-     screenshot is desired.
-   - Expected GUI: the lower-case command displays the normal `newbie-test`
-     help list, with `help` first and the remaining commands in ordinal/name
-     order. The upper-case sub-command is expected to display
-     `Command unknown, use newbie-test help`, because sub-command names are
-     case-sensitive; `AllowUppercase=true` preserves uppercase characters in
-     declared names and does not enable case-insensitive matching.
-   - The current log already captures the upper-case result; no code change is
-     required unless the project deliberately changes this policy.
-
-2. **Whitespace suppression**
-   - Submit a line containing spaces only.
-   - Expected GUI: no command is executed, no error is displayed, and no new
-     player-input record is added. The console should remain otherwise
-     unchanged.
-   - Capture the console and matching log boundary, if available.
-
-3. **S4 Unity/GameLibs same-session evidence, if required**
-   - Run `newbie-test s4-unity` in gameplay.
-   - Open the inventory and run `newbie-test s4-inventory`.
-   - Expected GUI: the normal game scene/inventory remains usable; the console
-     shows PASS markers for the real-component, hierarchy, alpha, direction,
-     coroutine, inventory lookup/filter/prefix/layout/selection checks; no
-     unexpected error or visual corruption appears.
-
-4. **Evidence capture and automated closure gate**
-   - Capture representative Cheat Console/gameplay/inventory evidence and
-     link bounded log excerpts.
-   - Record this session, game version, plugin list, expected/actual text,
-     and the classification of the uppercase mismatch and whitespace gap.
-   - Re-record Release build, xUnit, and smoke results against the final
-     worktree state before closing #52–#57.
+1. **Uppercase policy** is resolved without a code change. The lower-case
+   command is the supported form; the upper-case sub-command is expected to be
+   unknown because matching is case-sensitive.
+2. **Whitespace suppression** is verified. The blank submission is ignored,
+   produces no input record, and the console works after it is reopened. The
+   focus loss is an upstream UI behavior, not a TestMod failure.
+3. **S4 Unity/GameLibs follow-up** is verified. Unity helpers pass, and the
+   inventory-open checks pass with `Layout_Normal`.
+4. Remaining work is evidence-only unless a stricter artifact requirement is
+   desired:
+   - run `newbie-test s2-programmatic` and capture the console/log boundary for
+     the missing independent programmatic-command proof;
+   - attach or link representative S2, S4 Unity/GameLibs, and S4 API
+     screenshots/recordings for #53, #55, #56, and #57;
+   - retain the existing bundle-success deferral as non-blocking.
 
 The package contains only these TestMod-owned files:
 
@@ -121,16 +120,16 @@ publish/NewbieEltonLibsTestMod/localization/Newbie Elton Libraries Test Mod.txt
 
 | Slice | Implementation commit | In-game command(s) | Expected evidence | Actual result | Status |
 | --- | --- | --- | --- | --- | --- |
-| S1 flags | `6ed42a4` | `newbie-test s1` / `flags` | owner-only access, absent vs stored false, vanilla mutation, both NG+ policies, lifecycle markers | Pending tracked session; no result inferred | Pending manual |
-| S2 console | `5d1a565` | `s2-gating`, `s2-input`, `s2-output`, `s2-write`, `s2-programmatic` | one input/output record per boundary line, whitespace suppression, immediate independent toggles, Debug gate, `Unknown mod` fallback | Pending tracked session; no result inferred | Pending manual |
-| S3 resources | `22b9cb2` | `newbie-test s3`, `s3-stop` | storage isolation and Try/throw contracts, first frame, duration, null stop, frame order showing known last-frame skip | Pending tracked session; no result inferred | Pending manual |
-| S4 Unity/GameLibs | `54bd0a7` | `s4-unity`, `s4-live`, `s4-inventory` | real Unity helpers and live enemy/Boss/UI/I2/inventory objects | Pending tracked session; scene-dependent checks may be `BLOCKED` | Pending manual |
-| S4 ModdingAPI/commands | `1b077ac` | `s4-api`, `help` and invalid-parameter commands | file/bundle, input/axis, localization, console, command declaration evidence | Pending tracked session; bundle success needs a real data file | Pending manual |
+| S1 flags | `6ed42a4` | `newbie-test s1` / `flags` | owner-only access, absent vs stored false, vanilla mutation, both NG+ policies, lifecycle markers | Session `8bebb70...`; all probes passed and NG+/load/exit markers recorded | Pass; #52 ready to close |
+| S2 console | `5d1a565` | `s2-gating`, `s2-input`, `s2-output`, `s2-write`, `s2-programmatic` | one input/output record per boundary line, whitespace suppression, immediate independent toggles, Debug gate, `Unknown mod` fallback | Sessions `8bebb70...`/`bf30f5...`; whitespace and visible write pass; programmatic proof not rerun in follow-up | Functional pass; #53 remains open for programmatic/artifact evidence |
+| S3 resources | `22b9cb2` | `newbie-test s3`, `s3-stop` | storage isolation and Try/throw contracts, first frame, duration, null stop, frame order showing known last-frame skip | Earlier session logs plus user `Screenshot (46).png`; first animation continued while second stopped | Pass; #54 ready to close |
+| S4 Unity/GameLibs | `54bd0a7` | `s4-unity`, `s4-live`, `s4-inventory` | real Unity helpers and live enemy/Boss/UI/I2/inventory objects | Sessions `8bebb70...`/`bf30f5...`; live bosses, Unity helpers, and inventory checks passed; scene-dependent checks classified | Functional pass; #55 remains open for artifact evidence |
+| S4 ModdingAPI/commands | `1b077ac` | `s4-api`, `help` and invalid-parameter commands | file/bundle, input/axis, localization, console, command declaration evidence | Session `8bebb70...`; all non-bundle probes passed; bundle success explicitly deferred | Functional pass; #56 remains open for artifact evidence |
 
-For each row, append the tracked session id, game version, plugin list, exact
-steps, expected/actual text, a bounded log excerpt, and a screenshot or
-recording link. Do not replace `Pending manual` with `Passed` based only on a
-successful build.
+For each row, retain the tracked session id, game version, plugin list, exact
+steps, expected/actual text, and bounded log excerpts. The remaining issue
+blocker is the absence of accessible screenshot/recording links for S2 and S4,
+plus the unrerun `s2-programmatic` boundary proof; no product `FAIL` is open.
 
 ## Manual run contract
 
