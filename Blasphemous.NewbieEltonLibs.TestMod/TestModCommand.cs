@@ -19,6 +19,7 @@ using I2.Loc;
 using System.Collections;
 using System.Collections.Generic;
 using System;
+using System.IO;
 using UnityEngine;
 
 namespace Blasphemous.NewbieEltonLibs.TestMod;
@@ -486,7 +487,9 @@ internal sealed class TestModCommand : AutoModCommand
         {
             string dataPath = _mod.FileHandler.GetDataPath();
             string configPath = _mod.FileHandler.GetConfigPath();
-            string[] dataFiles = _mod.FileHandler.GetAllDataFileNames();
+            string[] dataFiles = Directory.Exists(dataPath)
+                ? _mod.FileHandler.GetAllDataFileNames()
+                : new string[0];
             bool missingBundle = !_mod.FileHandler.LoadDataAsAssetBundle("__S4_MISSING__.bundle", out AssetBundle missingAssetBundle)
                 && missingAssetBundle == null;
             ReportS4("file-paths", !string.IsNullOrEmpty(dataPath) && !string.IsNullOrEmpty(configPath),
