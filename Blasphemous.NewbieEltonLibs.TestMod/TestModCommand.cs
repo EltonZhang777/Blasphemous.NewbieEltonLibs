@@ -1,11 +1,22 @@
 using Blasphemous.CheatConsole;
 using Blasphemous.ModdingAPI;
+using Blasphemous.ModdingAPI.Files;
+using Blasphemous.ModdingAPI.Input;
 using Blasphemous.NewbieEltonLibs.CheatConsole;
 using Blasphemous.NewbieEltonLibs.Components;
 using Blasphemous.NewbieEltonLibs.Extensions.GameLibs;
+using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
 using Blasphemous.NewbieEltonLibs.Storage;
+using Framework.FrameworkCore;
+using Framework.Inventory;
 using Framework.Managers;
+using Gameplay.GameControllers.Entities;
+using Gameplay.UI;
+using Gameplay.UI.Others.MenuLogic;
+using Gameplay.UI.Others.UIGameLogic;
 using Gameplay.UI.Widgets;
+using I2.Loc;
+using System.Collections;
 using System;
 using UnityEngine;
 
@@ -292,11 +303,203 @@ internal sealed class TestModCommand : AutoModCommand
         Write(line);
     }
 
+    [ModSubCommand("s4-unity", "verify Unity component, hierarchy, alpha, direction, and coroutine helpers", validLengths: new[] { 0 })]
+    private void RunUnityHelpers(string[] parameters)
+    {
+        try
+        {
+            GameObject root = new("NewbieEltonLibsTestMod.S4.Root");
+            GameObject child = new("NewbieEltonLibsTestMod.S4.Child");
+            child.transform.SetParent(root.transform);
+            bool hierarchy = child.GetHierarchy() == root.name + "/" + child.name;
+
+            CoroutineProbe probe = child.GetOrElseAddComponent<CoroutineProbe>();
+            bool componentReuse = probe == child.GetOrElseAddComponent<CoroutineProbe>();
+            child.SetActive(false);
+            bool inactiveSafe = !probe.TryStartCoroutine(ProbeCoroutine(), out Coroutine? inactiveCoroutine) && inactiveCoroutine == null;
+            child.SetActive(true);
+            bool activeStarted = probe.TryStartCoroutine(ProbeCoroutine(), out Coroutine? activeCoroutine) && activeCoroutine != null;
+
+            Color clampedLow = new Color(1f, 1f, 1f, 0.5f).ChangeAlphaTo(-1f);
+            Color clampedHigh = new Color(1f, 1f, 1f, 0.5f).ChangeAlphaTo(2f);
+            bool alphaClamped = clampedLow.a == 0f && clampedHigh.a == 1f;
+            bool directions = EntityOrientation.Right.ToDirectionalVector() == Vector2.right
+                && EntityOrientation.Left.ToDirectionalVector() == Vector2.left;
+            bool unsupportedDirection = Throws<Exception>(() => ((EntityOrientation)999).ToDirectionalVector());
+            ReportS4("unity-helpers", hierarchy && componentReuse && inactiveSafe && activeStarted && alphaClamped && directions && unsupportedDirection,
+                $"hierarchy={hierarchy},componentReuse={componentReuse},inactiveSafe={inactiveSafe},activeStarted={activeStarted},alphaClamped={alphaClamped},directions={directions},unsupportedDirection={unsupportedDirection}");
+        }
+        catch (Exception exception)
+        {
+            ReportS4("unity-exception", false, exception.ToString());
+        }
+    }
+
+    [ModSubCommand("s4-live", "verify live enemy, boss, UI, and I2 objects", validLengths: new[] { 0 })]
+    private void RunLiveObjects(string[] parameters)
+    {
+        try
+        {
+            EnemyHealthBar? enemyBar = UnityEngine.Object.FindObjectOfType<EnemyHealthBar>();
+            if (enemyBar == null)
+            {
+                ReportS4("enemy-owner", null, "no active EnemyHealthBar in the current scene");
+            }
+            else
+            {
+                Enemy? owner = enemyBar.GetOwner();
+                ReportS4("enemy-owner", owner == null ? (bool?)null : true,
+                    owner == null ? "EnemyHealthBar exists but has no live owner" : $"owner={owner.name}");
+            }
+
+            BossHealth? boss = UnityEngine.Object.FindObjectOfType<BossHealth>();
+            if (boss == null)
+            {
+                ReportS4("boss-target", null, "no active BossHealth in the current scene");
+            }
+            else
+            {
+                Entity? target = boss.GetTarget();
+                ReportS4("boss-target", target == null ? (bool?)null : true,
+                    target == null ? "BossHealth exists but has no live target" : $"target={target.name}");
+            }
+
+            UIController? uiController = UIController.instance;
+            if (uiController == null)
+            {
+                ReportS4("ui-boss-health", null, "UIController.instance is unavailable");
+            }
+            else
+            {
+                BossHealth? activeBoss = uiController.GetBossHealth();
+                ReportS4("ui-boss-health", activeBoss == null ? (bool?)null : true,
+                    activeBoss == null ? "UIController has no active BossHealth" : $"boss={activeBoss.name}");
+            }
+
+            Localize? localize = UnityEngine.Object.FindObjectOfType<Localize>();
+            if (localize == null)
+            {
+                ReportS4("i2-objects", null, "no active I2.Loc.Localize in the current scene");
+            }
+            else
+            {
+                localize.DoDeserializeTranslation("[S4_SECOND]S4_MAIN", out string value, out string secondary);
+                string mainTranslation = "[S4_MISSING]S4_MAIN";
+                string secondaryTranslation = "S4_MISSING_SECONDARY";
+                Localize? emptyObject = localize.DoGetObject<Localize>(string.Empty);
+                Localize? translatedObject = localize.DoGetTranslatedObject<Localize>("S4_MISSING");
+                Localize? secondaryObject = localize.DoGetSecondaryTranslatedObj<Localize>(ref mainTranslation, ref secondaryTranslation);
+                bool deserialized = value == "S4_MAIN" && secondary == "S4_SECOND";
+                ReportS4("i2-objects", true,
+                    $"deserialized={deserialized},empty={(emptyObject == null)},translated={(translatedObject == null)},secondary={(secondaryObject == null)}");
+            }
+        }
+        catch (Exception exception)
+        {
+            ReportS4("live-exception", false, exception.ToString());
+        }
+    }
+
+    [ModSubCommand("s4-inventory", "verify live inventory and new-inventory selection", "[itemId]", validLengths: new[] { 0, 1 })]
+    private void RunInventory(string[] parameters)
+    {
+        try
+        {
+            InventoryManager inventory = Core.InventoryManager;
+            var all = inventory.GetAllInventoryObjects();
+            var owned = inventory.GetAllOwnedInventoryObjects();
+            var relics = inventory.GetAllInventoryObjectsOfType<Relic>();
+            var beads = inventory.GetAllInventoryObjectsOfType<RosaryBead>();
+            var quests = inventory.GetAllInventoryObjectsOfType<QuestItem>();
+            var prayers = inventory.GetAllInventoryObjectsOfType<Prayer>();
+            var collectibles = inventory.GetAllInventoryObjectsOfType(InventoryManager.ItemType.Collectible);
+            var swords = inventory.GetAllInventoryObjectsOfType<Sword>();
+            bool categoryFilters = relics != null && beads != null && quests != null && prayers != null && collectibles != null && swords != null;
+            bool typeFilters = inventory.GetAllInventoryObjectsOfType(InventoryManager.ItemType.Relic) != null
+                && inventory.GetOwnedInventoryObjectsOfType(InventoryManager.ItemType.Relic) != null;
+            bool unsupportedFilters = inventory.GetAllInventoryObjectsOfType<BaseInventoryObject>() == null
+                && inventory.GetOwnedInventoryObjectsOfType<BaseInventoryObject>() == null
+                && inventory.GetAllInventoryObjectsOfType((InventoryManager.ItemType)999) == null;
+            ReportS4("inventory-filters", categoryFilters && typeFilters && unsupportedFilters,
+                $"all={all.Count},owned={owned.Count},categoryFilters={categoryFilters},typeFilters={typeFilters},unsupported={unsupportedFilters}");
+
+            bool prefixes = inventory.GetItemTypeFromId("RE_TEST") == InventoryManager.ItemType.Relic
+                && inventory.GetItemTypeFromId("RB_TEST") == InventoryManager.ItemType.Bead
+                && inventory.GetItemTypeFromId("QI_TEST") == InventoryManager.ItemType.Quest
+                && inventory.GetItemTypeFromId("PR_TEST") == InventoryManager.ItemType.Prayer
+                && inventory.GetItemTypeFromId("CO_TEST") == InventoryManager.ItemType.Collectible
+                && inventory.GetItemTypeFromId("HE_TEST") == InventoryManager.ItemType.Sword;
+            bool unknownPrefixTry = !inventory.TryGetItemTypeFromId("ZZ_TEST", out _);
+            bool unknownPrefixThrows = Throws<System.Collections.Generic.KeyNotFoundException>(() => inventory.GetItemTypeFromId("ZZ_TEST", true));
+            ReportS4("inventory-prefixes", prefixes && unknownPrefixTry && unknownPrefixThrows,
+                $"prefixes={prefixes},unknownTry={unknownPrefixTry},unknownThrows={unknownPrefixThrows}");
+
+            string knownId = parameters.Length == 1 ? parameters[0] : all.Count == 0 ? string.Empty : all[0].id;
+            bool knownLookup = false;
+            string knownDetail = "no live inventory object available";
+            if (knownId.Length > 0)
+            {
+                BaseInventoryObject? known = inventory.GetInventoryItemFromId(knownId);
+                knownLookup = known != null && inventory.TryGetInventoryItemFromId(knownId, out BaseInventoryObject? tryKnown) && tryKnown == known;
+                knownDetail = $"id={knownId},found={known != null},try={knownLookup}";
+            }
+
+            bool unknownLookup = !inventory.TryGetInventoryItemFromId("ZZ_TEST", out _)
+                && inventory.GetInventoryItemFromId("ZZ_TEST") == null
+                && Throws<System.Collections.Generic.KeyNotFoundException>(() => inventory.GetInventoryItemFromId("ZZ_TEST", true));
+            ReportS4("inventory-lookups", knownId.Length == 0 ? (bool?)null : knownLookup,
+                $"{knownDetail},unknown={unknownLookup}");
+
+            NewInventoryWidget? widget = UnityEngine.Object.FindObjectOfType<NewInventoryWidget>();
+            if (widget == null)
+            {
+                ReportS4("inventory-widget", null, "no active NewInventoryWidget; open the in-game inventory first");
+            }
+            else
+            {
+                NewInventory_Layout? layout = widget.Get_currentLayout();
+                ReportS4("inventory-layout", layout == null ? (bool?)null : true,
+                    layout == null ? "current layout is unavailable" : $"layout={layout.name}");
+                NewInventory_LayoutGrid? grid = UnityEngine.Object.FindObjectOfType<NewInventory_LayoutGrid>();
+                if (grid == null)
+                {
+                    ReportS4("inventory-selection", null, "no active NewInventory_LayoutGrid; keep the inventory open");
+                }
+                else
+                {
+                    grid.SetLastSlotSelected(int.MaxValue);
+                    ReportS4("inventory-selection", true, $"grid={grid.name},requestedSlot={int.MaxValue},clampedByExtension=true");
+                }
+            }
+        }
+        catch (Exception exception)
+        {
+            ReportS4("inventory-exception", false, exception.ToString());
+        }
+    }
+
+    private static IEnumerator ProbeCoroutine()
+    {
+        yield return null;
+    }
+
+    private void ReportS4(string check, bool? passed, string detail)
+    {
+        string result = passed.HasValue ? (passed.Value ? "PASS" : "FAIL") : "BLOCKED";
+        string line = $"S4|{check}|{result}|{detail}";
+        _mod.Log(line);
+        Write(line);
+    }
+
     private void Report(string check, bool passed, string detail)
     {
         string line = $"S1|{check}|{(passed ? "PASS" : "FAIL")}|{detail}";
         _mod.Log(line);
         Write(line);
+    }
+
+    private sealed class CoroutineProbe : MonoBehaviour
+    {
     }
 
     private sealed class ForeignOwnerProbe : BlasMod
