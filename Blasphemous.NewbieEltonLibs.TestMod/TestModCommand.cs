@@ -41,8 +41,8 @@ internal sealed class TestModCommand : AutoModCommand
 
     protected override string CommandName => "newbie-test";
 
-    [ModSubCommand("s1", "verify mod-owned flags and lifecycle markers", validLengths: new[] { 0 })]
-    [ModSubCommand("flags", "alias for s1", validLengths: new[] { 0 })]
+    [ModSubCommand("s1", "verify mod-owned flags and lifecycle markers", validLengths: [0])]
+    [ModSubCommand("flags", "alias for s1", validLengths: [0])]
     private void RunFlags(string[] parameters)
     {
         try
@@ -98,7 +98,7 @@ internal sealed class TestModCommand : AutoModCommand
         }
     }
 
-    [ModSubCommand("s2-input", "enable or disable console input logging", "<on|off>", validLengths: new[] { 1 })]
+    [ModSubCommand("s2-input", "enable or disable console input logging", "<on|off>", validLengths: [1])]
     private void ConfigureInputLogging(string[] parameters)
     {
         if (!TryParseToggle(parameters[0], out bool active))
@@ -111,7 +111,7 @@ internal sealed class TestModCommand : AutoModCommand
         ReportS2("input-config", true, $"active={active},debugBuildOnly=true");
     }
 
-    [ModSubCommand("s2-output", "enable or disable console output logging", "<on|off>", validLengths: new[] { 1 })]
+    [ModSubCommand("s2-output", "enable or disable console output logging", "<on|off>", validLengths: [1])]
     private void ConfigureOutputLogging(string[] parameters)
     {
         if (!TryParseToggle(parameters[0], out bool active))
@@ -124,7 +124,7 @@ internal sealed class TestModCommand : AutoModCommand
         ReportS2("output-config", true, $"active={active},debugBuildOnly=true");
     }
 
-    [ModSubCommand("s2-level", "set input or output log level", "<input|output> <level>", validLengths: new[] { 2 })]
+    [ModSubCommand("s2-level", "set input or output log level", "<input|output> <level>", validLengths: [2])]
     private void ConfigureLoggingLevel(string[] parameters)
     {
         if (!Enum.IsDefined(typeof(LogLevel), parameters[1]))
@@ -157,7 +157,7 @@ internal sealed class TestModCommand : AutoModCommand
         Write(string.Join(" ", parameters));
     }
 
-    [ModSubCommand("s2-programmatic", "process a command without Submit", validLengths: new[] { 0 })]
+    [ModSubCommand("s2-programmatic", "process a command without Submit", validLengths: [0])]
     private void ProcessProgrammatically(string[] parameters)
     {
         ConsoleWidget console = ConsoleWidget.Instance;
@@ -171,7 +171,7 @@ internal sealed class TestModCommand : AutoModCommand
         ReportS2("programmatic", true, "ProcessCommand invoked; inspect input records for no nested player-input entry");
     }
 
-    [ModSubCommand("s2-gating", "enable both channels with Debug caller gating", validLengths: new[] { 0 })]
+    [ModSubCommand("s2-gating", "enable both channels with Debug caller gating", validLengths: [0])]
     private void EnableDebugGatedLogging(string[] parameters)
     {
         CheatConsoleLogging.LogCheatConsoleInput(true, LogLevel.Info, true);
@@ -204,7 +204,7 @@ internal sealed class TestModCommand : AutoModCommand
         Write(line);
     }
 
-    [ModSubCommand("s3", "verify runtime resource storage and ModAnimator", validLengths: new[] { 0 })]
+    [ModSubCommand("s3", "verify runtime resource storage and ModAnimator", validLengths: [0])]
     private void RunResources(string[] parameters)
     {
         try
@@ -227,8 +227,8 @@ internal sealed class TestModCommand : AutoModCommand
             ReportS3("sprite-storage", duplicateTryRegister && replace && missingReplace && get && missingGet && isolated && duplicateRegister && missingReplaceThrow,
                 $"duplicateTryRegister={duplicateTryRegister},replace={replace},missingReplace={missingReplace},get={get},missingGet={missingGet},isolated={isolated},duplicateRegister={duplicateRegister},missingReplaceThrow={missingReplaceThrow}");
 
-            AnimationInfo animation = new("S3_CYCLE", new[] { first, replacement, last }, 0.1f);
-            AnimationInfo replacementAnimation = new("S3_CYCLE", new[] { last, first }, 0.1f);
+            AnimationInfo animation = new("S3_CYCLE", [first, replacement, last], 0.1f);
+            AnimationInfo replacementAnimation = new("S3_CYCLE", [last, first], 0.1f);
             AnimationStorage animations = new();
             AnimationStorage separateAnimations = new();
             animations.Register(animation);
@@ -238,7 +238,7 @@ internal sealed class TestModCommand : AutoModCommand
             bool getAnimation = animations.TryGet("S3_CYCLE", out AnimationInfo? storedAnimation) && storedAnimation == animation;
             bool missingAnimation = !animations.TryGet("missing", out _);
             bool isolatedAnimation = !separateAnimations.TryGet("S3_CYCLE", out _);
-            bool invalidAnimation = Throws<ArgumentException>(() => new AnimationInfo("", new[] { first }, 0));
+            bool invalidAnimation = Throws<ArgumentException>(() => new AnimationInfo("", [first], 0));
             bool invalidImport = Throws<ArgumentException>(() => new AnimationImportInfo("S3_INVALID", " ", 0, 0, 0));
             ReportS3("animation-storage", duplicateAnimation && replaceAnimation && restoreAnimation && getAnimation && missingAnimation && isolatedAnimation && invalidAnimation && invalidImport,
                 $"duplicate={duplicateAnimation},replace={replaceAnimation},restore={restoreAnimation},get={getAnimation},missing={missingAnimation},isolated={isolatedAnimation},invalidAnimation={invalidAnimation},invalidImport={invalidImport}");
@@ -266,7 +266,7 @@ internal sealed class TestModCommand : AutoModCommand
         }
     }
 
-    [ModSubCommand("s3-stop", "set the tracked ModAnimator animation to null", validLengths: new[] { 0 })]
+    [ModSubCommand("s3-stop", "set the tracked ModAnimator animation to null", validLengths: [0])]
     private void StopResources(string[] parameters)
     {
         bool stopped = _mod.StopTrackedAnimator(out Sprite? currentSprite);
@@ -275,8 +275,10 @@ internal sealed class TestModCommand : AutoModCommand
 
     private static Sprite CreateSprite(string name, Color color)
     {
-        Texture2D texture = new(1, 1);
-        texture.name = name + "_Texture";
+        Texture2D texture = new(1, 1)
+        {
+            name = name + "_Texture"
+        };
         texture.SetPixel(0, 0, color);
         texture.Apply();
         Sprite sprite = Sprite.Create(texture, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1f);
@@ -305,7 +307,7 @@ internal sealed class TestModCommand : AutoModCommand
         Write(line);
     }
 
-    [ModSubCommand("s4-unity", "verify Unity component, hierarchy, alpha, direction, and coroutine helpers", validLengths: new[] { 0 })]
+    [ModSubCommand("s4-unity", "verify Unity component, hierarchy, alpha, direction, and coroutine helpers", validLengths: [0])]
     private void RunUnityHelpers(string[] parameters)
     {
         try
@@ -337,7 +339,7 @@ internal sealed class TestModCommand : AutoModCommand
         }
     }
 
-    [ModSubCommand("s4-live", "verify live enemy, boss, UI, and I2 objects", validLengths: new[] { 0 })]
+    [ModSubCommand("s4-live", "verify live enemy, boss, UI, and I2 objects", validLengths: [0])]
     private void RunLiveObjects(string[] parameters)
     {
         try
@@ -402,7 +404,7 @@ internal sealed class TestModCommand : AutoModCommand
         }
     }
 
-    [ModSubCommand("s4-inventory", "verify live inventory and new-inventory selection", "[itemId]", validLengths: new[] { 0, 1 })]
+    [ModSubCommand("s4-inventory", "verify live inventory and new-inventory selection", "[itemId]", validLengths: [0, 1])]
     private void RunInventory(string[] parameters)
     {
         try
@@ -480,7 +482,7 @@ internal sealed class TestModCommand : AutoModCommand
         }
     }
 
-    [ModSubCommand("s4-api", "verify ModdingAPI files, input, localization, console, and declarations", "[assetBundleFile]", validLengths: new[] { 0, 1 })]
+    [ModSubCommand("s4-api", "verify ModdingAPI files, input, localization, console, and declarations", "[assetBundleFile]", validLengths: [0, 1])]
     private void RunModdingApi(string[] parameters)
     {
         try
@@ -489,7 +491,7 @@ internal sealed class TestModCommand : AutoModCommand
             string configPath = _mod.FileHandler.GetConfigPath();
             string[] dataFiles = Directory.Exists(dataPath)
                 ? _mod.FileHandler.GetAllDataFileNames()
-                : new string[0];
+                : [];
             bool missingBundle = !_mod.FileHandler.LoadDataAsAssetBundle("__S4_MISSING__.bundle", out AssetBundle missingAssetBundle)
                 && missingAssetBundle == null;
             ReportS4("file-paths", !string.IsNullOrEmpty(dataPath) && !string.IsNullOrEmpty(configPath),
@@ -540,7 +542,7 @@ internal sealed class TestModCommand : AutoModCommand
             }
             else
             {
-                bool validation = !this.ValidateParameterList(new string[0], 1);
+                bool validation = !this.ValidateParameterList([], 1);
                 ReportS4("console-widget", validation, "GetConsoleWidget and invalid parameter wording exercised");
             }
 

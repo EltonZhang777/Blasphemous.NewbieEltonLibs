@@ -94,7 +94,7 @@ internal sealed class NewbieEltonLibsTestMod : BlasMod
 
     internal bool StopTrackedAnimator(out Sprite? currentSprite)
     {
-        currentSprite = _trackedRenderer == null ? null : _trackedRenderer.sprite;
+        currentSprite = _trackedRenderer?.sprite;
         if (_trackedAnimator == null)
         {
             return false;

@@ -88,11 +88,17 @@ if not exist "%formatReportPath%" (
     if "%exitCode%"=="0" set "exitCode=1"
     goto :finish
 )
-if not "%discoveryExitCode%"=="0" echo Info discovery returned %discoveryExitCode%; using the generated report.
+if not "%discoveryExitCode%"=="0" if not "%discoveryExitCode%"=="2" (
+    echo ERROR: info discovery failed with %discoveryExitCode%.
+    set "exitCode=%discoveryExitCode%"
+    goto :finish
+)
+if "%discoveryExitCode%"=="2" echo Info discovery found formatting changes; exit code 2 is expected with --verify-no-changes; using the generated report.
 
 rem The report has no code-fix metadata. The subroutine below classifies
 rem "No associated code fix found" as a skipped, non-failing diagnostic.
-powershell.exe -NoProfile -NonInteractive -Command "$report = Get-Content -Raw -LiteralPath $env:formatReportPath | ConvertFrom-Json; $ids = @($report | ForEach-Object { $_.FileChanges } | Where-Object { $_.DiagnosticId } | Select-Object -ExpandProperty DiagnosticId -Unique | Where-Object { $_ -ne 'IDE0130' -and $_ -ne 'IMPORTS' } | Sort-Object); [System.IO.File]::WriteAllLines($env:infoDiagnosticListPath, [string[]]$ids, [System.Text.Encoding]::ASCII)"
+rem IDE0060 has no associated code fix and is intentionally omitted.
+powershell.exe -NoProfile -NonInteractive -Command "$report = Get-Content -Raw -LiteralPath $env:formatReportPath | ConvertFrom-Json; $ids = @($report | ForEach-Object { $_.FileChanges } | Where-Object { $_.DiagnosticId -and $_.DiagnosticId -notin @('IDE0060', 'IDE0130', 'IMPORTS') } | Select-Object -ExpandProperty DiagnosticId -Unique | Sort-Object); [System.IO.File]::WriteAllLines($env:infoDiagnosticListPath, [string[]]$ids, [System.Text.Encoding]::ASCII)"
 if errorlevel 1 (
     echo Failed to parse the info diagnostic report.
     set "exitCode=1"
