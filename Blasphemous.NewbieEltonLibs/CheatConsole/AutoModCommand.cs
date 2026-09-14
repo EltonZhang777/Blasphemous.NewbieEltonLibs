@@ -34,7 +34,7 @@ public abstract class AutoModCommand : ModCommand
         List<SubCommandInfo> infos = [];
 
         // 1. scan attribute-declared sub-commands
-        foreach (MethodInfo method in GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+        foreach (MethodInfo method in GetType().GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
         {
             object[] attributes = method.GetCustomAttributes(typeof(ModSubCommandAttribute), false);
             if (attributes.Length == 0)
@@ -152,17 +152,10 @@ public abstract class AutoModCommand : ModCommand
         };
     }
 
-    private sealed class SubCommandInfo
+    private sealed class SubCommandInfo(string name, string? usage, string description)
     {
-        public string Name;
-        public string? Usage;
-        public string Description;
-
-        public SubCommandInfo(string name, string? usage, string description)
-        {
-            Name = name;
-            Usage = usage;
-            Description = description;
-        }
+        public string Name = name;
+        public string? Usage = usage;
+        public string Description = description;
     }
 }

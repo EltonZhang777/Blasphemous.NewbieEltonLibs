@@ -1,0 +1,5 @@
+lang: en
+testmod.hello: Hello from NewbieEltonLibs TestMod
+testmod.default_only: Default fallback from NewbieEltonLibs TestMod
+lang: es
+testmod.hello: Hola desde NewbieEltonLibs TestMod

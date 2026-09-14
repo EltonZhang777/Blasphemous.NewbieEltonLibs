@@ -34,7 +34,7 @@ public static class FileHandlerExtensions
     /// </summary>
     public static string[] GetAllDataFileNames(this FileHandler fileHandler)
     {
-        return Directory.GetFiles(fileHandler.GetDataPath()).Select(x => Path.GetFileName(x)).ToArray();
+        return [.. Directory.GetFiles(fileHandler.GetDataPath()).Select(x => Path.GetFileName(x))];
     }
 
     /// <summary>

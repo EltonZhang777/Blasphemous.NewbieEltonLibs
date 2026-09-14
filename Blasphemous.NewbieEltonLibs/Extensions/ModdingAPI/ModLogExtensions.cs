@@ -1,4 +1,5 @@
 using Blasphemous.ModdingAPI;
+using Blasphemous.ModdingAPI.Helpers;
 using System;
 using System.Diagnostics;
 using System.Reflection;
@@ -16,13 +17,40 @@ public static class ModLogExtensions
         return attr != null && attr.IsJITOptimizerDisabled;
     }
 
+    private static bool TryGetCallingMod(Assembly callingAssembly, out BlasMod mod)
+    {
+        if (ModHelper.LoadedMods == null)
+        {
+            mod = null!;
+            return false;
+        }
+
+        return ModHelper.TryGetMod(loadedMod => loadedMod.GetType().Assembly == callingAssembly, out mod);
+    }
+
+    private static void LogIfDebugBuild(
+        object message,
+        Assembly callingAssembly,
+        Action<object> log,
+        Action<object, BlasMod> logWithMod)
+    {
+        if (!IsAssemblyDebugBuild(callingAssembly))
+            return;
+
+        string debugMessage = "[DEBUG] " + message;
+        if (TryGetCallingMod(callingAssembly, out BlasMod mod))
+            logWithMod(debugMessage, mod);
+        else
+            log(debugMessage);
+    }
+
     /// <summary>
     /// Logs an Info message only when the calling assembly is a debug build
     /// </summary>
     public static void InfoIfDebugBuild(object message)
     {
-        if (IsAssemblyDebugBuild(Assembly.GetCallingAssembly()))
-            ModLog.Info("[DEBUG] " + message);
+        Assembly callingAssembly = Assembly.GetCallingAssembly();
+        LogIfDebugBuild(message, callingAssembly, ModLog.Info, ModLog.Info);
     }
 
     /// <summary>
@@ -39,8 +67,8 @@ public static class ModLogExtensions
     /// </summary>
     public static void WarnIfDebugBuild(object message)
     {
-        if (IsAssemblyDebugBuild(Assembly.GetCallingAssembly()))
-            ModLog.Warn("[DEBUG] " + message);
+        Assembly callingAssembly = Assembly.GetCallingAssembly();
+        LogIfDebugBuild(message, callingAssembly, ModLog.Warn, ModLog.Warn);
     }
 
     /// <summary>
@@ -57,8 +85,8 @@ public static class ModLogExtensions
     /// </summary>
     public static void ErrorIfDebugBuild(object message)
     {
-        if (IsAssemblyDebugBuild(Assembly.GetCallingAssembly()))
-            ModLog.Error("[DEBUG] " + message);
+        Assembly callingAssembly = Assembly.GetCallingAssembly();
+        LogIfDebugBuild(message, callingAssembly, ModLog.Error, ModLog.Error);
     }
 
     /// <summary>
@@ -75,8 +103,8 @@ public static class ModLogExtensions
     /// </summary>
     public static void FatalIfDebugBuild(object message)
     {
-        if (IsAssemblyDebugBuild(Assembly.GetCallingAssembly()))
-            ModLog.Fatal("[DEBUG] " + message);
+        Assembly callingAssembly = Assembly.GetCallingAssembly();
+        LogIfDebugBuild(message, callingAssembly, ModLog.Fatal, ModLog.Fatal);
     }
 
     /// <summary>
@@ -93,8 +121,8 @@ public static class ModLogExtensions
     /// </summary>
     public static void DebugIfDebugBuild(object message)
     {
-        if (IsAssemblyDebugBuild(Assembly.GetCallingAssembly()))
-            ModLog.Debug("[DEBUG] " + message);
+        Assembly callingAssembly = Assembly.GetCallingAssembly();
+        LogIfDebugBuild(message, callingAssembly, ModLog.Debug, ModLog.Debug);
     }
 
     /// <summary>
@@ -111,8 +139,8 @@ public static class ModLogExtensions
     /// </summary>
     public static void DisplayIfDebugBuild(object message)
     {
-        if (IsAssemblyDebugBuild(Assembly.GetCallingAssembly()))
-            ModLog.Display("[DEBUG] " + message);
+        Assembly callingAssembly = Assembly.GetCallingAssembly();
+        LogIfDebugBuild(message, callingAssembly, ModLog.Display, ModLog.Display);
     }
 
     /// <summary>

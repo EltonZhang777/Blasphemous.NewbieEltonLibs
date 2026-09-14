@@ -39,7 +39,7 @@ public static class SystemExtensions
     /// <returns>The enum value at the new position, wrapping around if out of bounds</returns>
     public static T GetNextEnumValue<T>(this T currentValue, int stepLength = 1) where T : Enum
     {
-        T[] values = Enum.GetValues(typeof(T)).Cast<T>().ToArray();
+        T[] values = [.. Enum.GetValues(typeof(T)).Cast<T>()];
         int currentIndex = Array.IndexOf(values, currentValue);
 
         // Calculate the new index, handling out-of-bounds cases
@@ -60,7 +60,7 @@ public static class SystemExtensions
     /// <returns>The string with all specified words replaced</returns>
     public static string ReplaceWords(this string str, Dictionary<string, string> targetsToReplacements)
     {
-        string pattern = string.Join("|", targetsToReplacements.Keys.ToArray());
+        string pattern = string.Join("|", [.. targetsToReplacements.Keys]);
         str = Regex.Replace(str, pattern, match =>
         {
             return targetsToReplacements[match.Value];
