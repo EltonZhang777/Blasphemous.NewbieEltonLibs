@@ -9,7 +9,7 @@ Reusable library of APIs for developing **Blasphemous 1** mods
 Reference the NuGet package (published to nuget.org) in your mod project:
 
 ```xml
-<PackageReference Include="Blasphemous.NewbieEltonLibs" Version="0.1.0" />
+<PackageReference Include="Blasphemous.NewbieEltonLibs" Version="0.3.0" />
 ```
 
 Requires .NET Framework 3.5 target and the standard Blasphemous mod stack (`Blasphemous.ModdingAPI`, `Blasphemous.CheatConsole`).

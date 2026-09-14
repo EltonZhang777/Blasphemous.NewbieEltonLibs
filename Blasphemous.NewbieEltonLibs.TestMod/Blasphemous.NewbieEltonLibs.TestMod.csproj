@@ -10,7 +10,7 @@
     <Authors>NewbieElton</Authors>
     <Company>NewbieElton</Company>
     <Description>External consuming mod for real-game verification.</Description>
-    <Version>0.2.1</Version>
+    <Version>0.3.0</Version>
 
     <AssemblyName>NewbieEltonLibsTestMod</AssemblyName>
     <RootNamespace>Blasphemous.NewbieEltonLibs.TestMod</RootNamespace>
