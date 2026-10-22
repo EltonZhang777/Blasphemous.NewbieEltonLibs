@@ -131,7 +131,7 @@ public class AudioClipStorage
     /// <param name="name">The name under which to register the imported AudioClip.</param>
     /// <param name="relativePath">An MP3 or PCM WAV path relative to the mod's Data directory.</param>
     /// <param name="onSuccess">Called once with the requested name and registered AudioClip after a successful import.</param>
-    /// <param name="onFailure">Called once with the requested name and a failure message when import fails.</param>
+    /// <param name="onFailure">Called once with the requested name and a failure message when import fails or its coroutine is stopped before completion.</param>
     /// <returns>A coroutine that the consuming mod must start with Unity.</returns>
     /// <exception cref="ArgumentNullException">Thrown when a callback is <see langword="null" />.</exception>
     public IEnumerator ImportAsync(FileHandler fileHandler, string name, string relativePath,
@@ -158,100 +158,145 @@ public class AudioClipStorage
     private IEnumerator ImportCore(FileHandler fileHandler, string name, string relativePath,
         Action<string, AudioClip> onSuccess, Action<string, string> onFailure)
     {
-        string fullPath = null!;
-        AudioType audioType = AudioType.UNKNOWN;
-        string failure = null!;
-        bool prepared = false;
-
-        try
-        {
-            prepared = TryPrepareImport(fileHandler, name, relativePath, out fullPath, out audioType, out failure);
-        }
-        catch (Exception exception)
-        {
-            failure = "Could not prepare the audio import: " + exception.Message;
-        }
-
-        if (!prepared)
-        {
-            _pendingImports.Remove(name);
-            onFailure(name, failure);
-            yield break;
-        }
-
         WWW? request = null;
-        try
-        {
-            request = new WWW(new Uri(fullPath).AbsoluteUri);
-        }
-        catch (Exception exception)
-        {
-            failure = "Could not start the audio import: " + exception.Message;
-        }
-
-        if (request == null)
-        {
-            _pendingImports.Remove(name);
-            onFailure(name, failure ?? "Unity could not create the audio request.");
-            yield break;
-        }
-
-        yield return request;
-
         AudioClip? clip = null;
-        failure = null!;
-        try
-        {
-            if (!string.IsNullOrEmpty(request.error))
-            {
-                failure = "Could not load the audio file: " + request.error;
-            }
-            else
-            {
-                clip = request.GetAudioClip(false, false, audioType);
-            }
-        }
-        catch (Exception exception)
-        {
-            failure = "Could not decode the audio file: " + exception.Message;
-        }
+        bool reservationHeld = true;
+        bool callbackDelivered = false;
 
         try
         {
-            request.Dispose();
-        }
-        catch (Exception exception)
-        {
-            if (failure == null)
+            string fullPath = null!;
+            AudioType audioType = AudioType.UNKNOWN;
+            string failure = null!;
+            bool prepared = false;
+
+            try
             {
-                failure = "Could not release the audio request: " + exception.Message;
+                prepared = TryPrepareImport(fileHandler, name, relativePath, out fullPath, out audioType, out failure);
+            }
+            catch (Exception exception)
+            {
+                failure = "Could not prepare the audio import: " + exception.Message;
+            }
+
+            if (!prepared)
+            {
+                _pendingImports.Remove(name);
+                reservationHeld = false;
+                callbackDelivered = true;
+                onFailure(name, failure);
+                yield break;
+            }
+
+            try
+            {
+                request = new WWW(new Uri(fullPath).AbsoluteUri);
+            }
+            catch (Exception exception)
+            {
+                failure = "Could not start the audio import: " + exception.Message;
+            }
+
+            if (request == null)
+            {
+                _pendingImports.Remove(name);
+                reservationHeld = false;
+                callbackDelivered = true;
+                onFailure(name, failure ?? "Unity could not create the audio request.");
+                yield break;
+            }
+
+            yield return request;
+
+            failure = null!;
+            try
+            {
+                if (!string.IsNullOrEmpty(request.error))
+                {
+                    failure = "Could not load the audio file: " + request.error;
+                }
+                else
+                {
+                    clip = request.GetAudioClip(false, false, audioType);
+                }
+            }
+            catch (Exception exception)
+            {
+                failure = "Could not decode the audio file: " + exception.Message;
+            }
+
+            try
+            {
+                request.Dispose();
+            }
+            catch (Exception exception)
+            {
+                if (failure == null)
+                {
+                    failure = "Could not release the audio request: " + exception.Message;
+                }
+            }
+            request = null;
+
+            if (failure != null)
+            {
+                DestroyUnregisteredClip(clip);
+                _pendingImports.Remove(name);
+                reservationHeld = false;
+                callbackDelivered = true;
+                onFailure(name, failure);
+                yield break;
+            }
+
+            if (clip == null)
+            {
+                _pendingImports.Remove(name);
+                reservationHeld = false;
+                callbackDelivered = true;
+                onFailure(name, "Unity could not decode the audio file.");
+                yield break;
+            }
+
+            if (!TryCompleteImport(name, clip))
+            {
+                DestroyUnregisteredClip(clip);
+                _pendingImports.Remove(name);
+                reservationHeld = false;
+                callbackDelivered = true;
+                onFailure(name, "The AudioClip name is invalid or already registered.");
+                yield break;
+            }
+
+            reservationHeld = false;
+            callbackDelivered = true;
+            onSuccess(name, clip);
+        }
+        finally
+        {
+            if (reservationHeld && !callbackDelivered)
+            {
+                if (request != null)
+                {
+                    try
+                    {
+                        request.Dispose();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
+
+                if (clip != null && !_clips.ContainsKey(name))
+                {
+                    DestroyUnregisteredClip(clip);
+                }
+
+                _pendingImports.Remove(name);
+                reservationHeld = false;
+                callbackDelivered = true;
+                onFailure(name, "The audio import was cancelled or interrupted before completion.");
             }
         }
-
-        if (failure != null)
-        {
-            DestroyUnregisteredClip(clip);
-            _pendingImports.Remove(name);
-            onFailure(name, failure);
-            yield break;
-        }
-
-        if (clip == null)
-        {
-            _pendingImports.Remove(name);
-            onFailure(name, "Unity could not decode the audio file.");
-            yield break;
-        }
-
-        if (!TryCompleteImport(name, clip))
-        {
-            DestroyUnregisteredClip(clip);
-            _pendingImports.Remove(name);
-            onFailure(name, "The AudioClip name is invalid or already registered.");
-            yield break;
-        }
-
-        onSuccess(name, clip);
     }
 
     private bool TryReserveImportName(string name, out string failure)
