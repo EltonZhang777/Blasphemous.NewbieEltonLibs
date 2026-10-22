@@ -1,10 +1,12 @@
 using Blasphemous.CheatConsole;
 using Blasphemous.Framework.UI;
 using Blasphemous.ModdingAPI;
+using Blasphemous.ModdingAPI.Helpers;
 using Blasphemous.NewbieEltonLibs.CheatConsole;
 using Blasphemous.NewbieEltonLibs.Components;
 using Framework.Pooling;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Blasphemous.NewbieEltonLibs.TestMod;
@@ -14,6 +16,7 @@ internal sealed class UIPoolSmokeCommand : AutoModCommand
     private readonly NewbieEltonLibsTestMod _mod;
     private GameObject? _sharedPrefab;
     private GameObject? _sameNamePrefab;
+    private GameObject? _capacityPrefab;
     private GameObject? _missingPrefab;
 
     internal UIPoolSmokeCommand(NewbieEltonLibsTestMod mod)
@@ -117,6 +120,56 @@ internal sealed class UIPoolSmokeCommand : AutoModCommand
                 && !ReferenceEquals(highResInstance.GameObject, explicitOwner.GameObject);
             Report("canvas-isolation", canvasIsolation,
                 $"distinctCanvasInstance={canvasIsolation}");
+
+            GameObject capacityPrefab = GetCapacityPrefab();
+            UIObjectPoolManager.ObjectInstance? capacityFirst = pixelPerfect.ReuseObject(
+                capacityPrefab,
+                firstPosition,
+                firstRotation,
+                createPoolIfNeeded: true,
+                poolSize: 2);
+            if (capacityFirst != null)
+                capacityFirst.GameObject.SetActive(false);
+            UIObjectPoolManager.ObjectInstance? capacitySecond = pixelPerfect.ReuseObject(
+                capacityPrefab,
+                secondPosition,
+                secondRotation,
+                createPoolIfNeeded: false,
+                poolSize: 2);
+            UIObjectPoolManager.ObjectInstance? capacityThird = pixelPerfect.ReuseObject(
+                capacityPrefab,
+                firstPosition,
+                firstRotation,
+                createPoolIfNeeded: false,
+                poolSize: 2);
+            bool capacityHonored = capacityFirst != null
+                && capacitySecond != null
+                && capacityThird != null
+                && !ReferenceEquals(capacityFirst, capacitySecond)
+                && ReferenceEquals(capacityFirst, capacityThird);
+            Report("pool-capacity", capacityHonored,
+                $"firstAndSecondDistinct={capacityFirst != null && capacitySecond != null && !ReferenceEquals(capacityFirst, capacitySecond)},thirdReusesFirst={ReferenceEquals(capacityFirst, capacityThird)}");
+
+            BlasMod? secondOwner = FindSecondLoadedMod();
+            if (secondOwner == null)
+            {
+                Report("owner-isolation", null, "requires another loaded BlasMod; see issue #65 for the two-consumer game check");
+            }
+            else
+            {
+                UIObjectPoolManager.ObjectInstance? secondOwnerInstance = pixelPerfect.ReuseObject(
+                    sharedPrefab,
+                    firstPosition,
+                    firstRotation,
+                    secondOwner,
+                    createPoolIfNeeded: true,
+                    poolSize: 1);
+                bool ownerIsolation = secondOwnerInstance != null
+                    && explicitOwner != null
+                    && !ReferenceEquals(secondOwnerInstance.GameObject, explicitOwner.GameObject);
+                Report("owner-isolation", ownerIsolation,
+                    $"secondOwner={secondOwner.Id},distinctInstance={ownerIsolation}");
+            }
         }
         catch (Exception exception)
         {
@@ -145,6 +198,31 @@ internal sealed class UIPoolSmokeCommand : AutoModCommand
         return _sameNamePrefab;
     }
 
+    private GameObject GetCapacityPrefab()
+    {
+        if (_capacityPrefab != null)
+            return _capacityPrefab;
+
+        _capacityPrefab = new GameObject("NewbieEltonLibs.UI.Pool.CapacityPrefab");
+        _capacityPrefab.SetActive(false);
+        return _capacityPrefab;
+    }
+
+    private BlasMod? FindSecondLoadedMod()
+    {
+        IEnumerable<BlasMod>? loadedMods = ModHelper.LoadedMods;
+        if (loadedMods == null)
+            return null;
+
+        foreach (BlasMod candidate in loadedMods)
+        {
+            if (candidate != null && !ReferenceEquals(candidate, _mod))
+                return candidate;
+        }
+
+        return null;
+    }
+
     private GameObject GetMissingPrefab()
     {
         if (_missingPrefab != null)
@@ -155,9 +233,10 @@ internal sealed class UIPoolSmokeCommand : AutoModCommand
         return _missingPrefab;
     }
 
-    private void Report(string check, bool passed, string detail)
+    private void Report(string check, bool? passed, string detail)
     {
-        string line = $"S5|{check}|{(passed ? "PASS" : "FAIL")}|{detail}";
+        string result = passed.HasValue ? (passed.Value ? "PASS" : "FAIL") : "BLOCKED";
+        string line = $"S5|{check}|{result}|{detail}";
         _mod.Log(line);
         Write(line);
     }

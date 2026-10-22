@@ -169,15 +169,17 @@ public sealed class UIObjectPoolManager : MonoBehaviour
     {
         Queue<ObjectInstance> pool = new(poolSize);
         GameObject poolRoot = new(prefab.name + " pool (" + owner.GetType().Name + ")");
+        poolRoot.SetActive(false);
         poolRoot.transform.SetParent(transform);
 
         for (int i = 0; i < poolSize; i++)
         {
-            ObjectInstance instance = new(UnityEngine.Object.Instantiate<GameObject>(prefab));
+            GameObject pooledGameObject = UnityEngine.Object.Instantiate<GameObject>(prefab, poolRoot.transform);
+            ObjectInstance instance = new(pooledGameObject);
             pool.Enqueue(instance);
-            instance.SetParent(poolRoot.transform);
         }
 
+        poolRoot.SetActive(true);
         return pool;
     }
 
