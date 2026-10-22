@@ -193,10 +193,27 @@ public static class ModFlagsManager
 
     internal static bool TryResolveMod(Type? modType, Assembly callingAssembly, out BlasMod? mod)
     {
+        return TryResolveMod(modType, callingAssembly, explicitOwner: null, out mod);
+    }
+
+    internal static bool TryResolveMod(BlasMod explicitOwner, out BlasMod? mod)
+    {
+        if (explicitOwner == null)
+        {
+            mod = null;
+            ModLog.Error("Cannot resolve the explicit mod identity because the mod is null.");
+            return false;
+        }
+
+        return TryResolveMod(explicitOwner.GetType(), typeof(ModFlagsManager).Assembly, explicitOwner, out mod);
+    }
+
+    private static bool TryResolveMod(Type? modType, Assembly callingAssembly, BlasMod? explicitOwner, out BlasMod? mod)
+    {
         mod = null;
         if (modType != null && (!typeof(BlasMod).IsAssignableFrom(modType) || modType.IsAbstract))
         {
-            ModLog.Error($"Cannot resolve mod-owned flag identity from invalid mod type '{modType}'.");
+            ModLog.Error($"Cannot resolve mod identity from invalid mod type '{modType}'.");
             return false;
         }
 
@@ -207,13 +224,13 @@ public static class ModFlagsManager
         }
         catch (Exception exception)
         {
-            ModLog.Error($"Failed to resolve mod-owned flag identity: {exception.Message}");
+            ModLog.Error($"Failed to resolve mod identity: {exception.Message}");
             return false;
         }
 
         if (loadedMods == null)
         {
-            ModLog.Error("Cannot resolve mod-owned flag identity because no loaded mod list is available.");
+            ModLog.Error("Cannot resolve mod identity because no loaded mod list is available.");
             return false;
         }
 
@@ -227,7 +244,12 @@ public static class ModFlagsManager
                     continue;
 
                 Type candidateType = candidate.GetType();
-                if (modType != null ? candidateType != modType : candidateType.Assembly != callingAssembly)
+                bool isMatch = explicitOwner != null
+                    ? ReferenceEquals(candidate, explicitOwner)
+                    : modType != null
+                        ? candidateType == modType
+                        : candidateType.Assembly == callingAssembly;
+                if (!isMatch)
                     continue;
 
                 match = candidate;
@@ -236,14 +258,16 @@ public static class ModFlagsManager
         }
         catch (Exception exception)
         {
-            ModLog.Error($"Failed to resolve mod-owned flag identity for '{modType}': {exception.Message}");
+            ModLog.Error($"Failed to resolve mod identity for '{modType}': {exception.Message}");
             return false;
         }
 
         if (matchCount != 1 || match == null)
         {
-            string identity = modType == null ? $"calling assembly '{callingAssembly.FullName}'" : $"mod type '{modType}'";
-            ModLog.Error($"Cannot resolve mod-owned flag identity for {identity}: expected one loaded mod, found {matchCount}.");
+            string identity = explicitOwner != null
+                ? $"explicit mod instance '{explicitOwner.GetType()}'"
+                : modType == null ? $"calling assembly '{callingAssembly.FullName}'" : $"mod type '{modType}'";
+            ModLog.Error($"Cannot resolve mod identity for {identity}: expected one loaded mod, found {matchCount}.");
             return false;
         }
 

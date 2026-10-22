@@ -51,7 +51,6 @@ public sealed class UIObjectPoolManager : MonoBehaviour
             rotation,
             modType: null,
             callingAssembly: Assembly.GetCallingAssembly(),
-            expectedOwner: null,
             createPoolIfNeeded,
             poolSize);
     }
@@ -81,15 +80,10 @@ public sealed class UIObjectPoolManager : MonoBehaviour
             return null;
         }
 
-        return ReuseObject(
-            prefab,
-            position,
-            rotation,
-            owner.GetType(),
-            Assembly.GetCallingAssembly(),
-            owner,
-            createPoolIfNeeded,
-            poolSize);
+        if (!ModFlagsManager.TryResolveMod(owner, out BlasMod? resolvedOwner) || resolvedOwner == null)
+            return null;
+
+        return ReuseObjectForMod(prefab, position, rotation, resolvedOwner, createPoolIfNeeded, poolSize);
     }
 
     private static UIObjectPoolManager? GetOrAddCanvasManager(Transform? canvas, string canvasName)
@@ -109,7 +103,20 @@ public sealed class UIObjectPoolManager : MonoBehaviour
         Quaternion rotation,
         Type? modType,
         Assembly callingAssembly,
-        BlasMod? expectedOwner,
+        bool createPoolIfNeeded,
+        int poolSize)
+    {
+        if (!ModFlagsManager.TryResolveMod(modType, callingAssembly, out BlasMod? owner) || owner == null)
+            return null;
+
+        return ReuseObjectForMod(prefab, position, rotation, owner, createPoolIfNeeded, poolSize);
+    }
+
+    private ObjectInstance? ReuseObjectForMod(
+        GameObject prefab,
+        Vector3 position,
+        Quaternion rotation,
+        BlasMod owner,
         bool createPoolIfNeeded,
         int poolSize)
     {
@@ -119,12 +126,9 @@ public sealed class UIObjectPoolManager : MonoBehaviour
             return null;
         }
 
-        if (!ModFlagsManager.TryResolveMod(modType, callingAssembly, out BlasMod? owner) || owner == null)
-            return null;
-
-        if (expectedOwner != null && !ReferenceEquals(owner, expectedOwner))
+        if (owner == null)
         {
-            ModLog.Error($"Cannot resolve UI object pool ownership for explicit mod '{expectedOwner.GetType()}'.");
+            ModLog.Error("Cannot reuse a UI pool object because the owner mod is null.");
             return null;
         }
 
@@ -218,9 +222,9 @@ public sealed class UIObjectPoolManager : MonoBehaviour
             if (GameObject == null)
                 return;
 
-            GameObject.SetActive(true);
             _transform.position = position;
             _transform.rotation = rotation;
+            GameObject.SetActive(true);
 
             foreach (PoolObject poolObject in _poolObjectScripts)
                 poolObject.OnObjectReuse();
