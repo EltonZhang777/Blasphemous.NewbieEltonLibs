@@ -120,7 +120,9 @@ public sealed class AudioClipStorageTests
     {
         string tempPath = Path.Combine(Path.GetTempPath(), "NewbieAudioReparse-" + Guid.NewGuid().ToString("N"));
         string dataTargetPath = Path.Combine(tempPath, "target", "Data");
-        Directory.CreateDirectory(dataTargetPath);
+        string audioTargetPath = Path.Combine(dataTargetPath, "audio");
+        Directory.CreateDirectory(audioTargetPath);
+        File.WriteAllBytes(Path.Combine(audioTargetPath, "clip.mp3"), new byte[0]);
 
         string parentLinkPath = Path.Combine(tempPath, "linked-parent");
         CreateDirectoryLink(parentLinkPath, Path.GetDirectoryName(dataTargetPath)!);
@@ -303,7 +305,7 @@ public sealed class AudioClipStorageTests
         Assert.Equal(0, successCount);
         Assert.Equal(1, failureCount);
         Assert.Equal(name, callbackName);
-        Assert.False(string.IsNullOrEmpty(failure));
+        Assert.Contains("symbolic link or junction", failure ?? string.Empty);
         Assert.False(storage.TryGet(name, out _));
     }
 
