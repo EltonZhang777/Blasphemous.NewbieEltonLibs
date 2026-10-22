@@ -1,5 +1,10 @@
-NLayer
+NLayer 1.12.0 (source adapted for Unity's .NET 3.5 profile)
 Copyright (c) 2018 Mark Heath, Andrew Ward & Contributors
+Source: https://github.com/naudio/NLayer
+
+The decoder source is built as a bundled NLayer.dll. System.IO.InvalidDataException
+was replaced with FormatException because the game's Unity profile does not
+provide InvalidDataException.
 
 MIT License
 

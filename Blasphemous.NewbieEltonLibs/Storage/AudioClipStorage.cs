@@ -253,19 +253,8 @@ public class AudioClipStorage
                     }
                     else
                     {
-                        try
-                        {
-                            clip = AudioClip.Create(name, mp3Decode.Samples.Length / mp3Decode.Channels,
-                                mp3Decode.Channels, mp3Decode.SampleRate, false);
-                            if (clip == null || !clip.SetData(mp3Decode.Samples, 0))
-                            {
-                                failure = "Unity could not create an AudioClip from the decoded MP3 data.";
-                            }
-                        }
-                        catch (Exception exception)
-                        {
-                            failure = "Could not create an AudioClip from the MP3 data: " + exception.Message;
-                        }
+                        failure = CreateMp3AudioClip(name, mp3Decode.Samples, mp3Decode.Channels,
+                            mp3Decode.SampleRate, out clip);
                     }
                 }
             }
@@ -280,7 +269,7 @@ public class AudioClipStorage
                     failure = "Could not start the audio import: " + exception.Message;
                 }
 
-                if (request == null)
+                if (request is null)
                 {
                     failure ??= "Unity could not create the audio request.";
                 }
@@ -288,22 +277,7 @@ public class AudioClipStorage
                 {
                     yield return request;
 
-                    failure = null!;
-                    try
-                    {
-                        if (!string.IsNullOrEmpty(request.error))
-                        {
-                            failure = "Could not load the audio file: " + request.error;
-                        }
-                        else
-                        {
-                            clip = request.GetAudioClip(false, false, audioType);
-                        }
-                    }
-                    catch (Exception exception)
-                    {
-                        failure = "Could not decode the audio file: " + exception.Message;
-                    }
+                    clip = GetAudioClip(request, audioType, out failure);
 
                     try
                     {
@@ -330,7 +304,7 @@ public class AudioClipStorage
                 yield break;
             }
 
-            if (clip == null)
+            if (clip is null)
             {
                 _pendingImports.Remove(name);
                 reservationHeld = false;
@@ -362,7 +336,7 @@ public class AudioClipStorage
                     mp3Decode.Cancelled = true;
                 }
 
-                if (request != null)
+                if (request is not null)
                 {
                     try
                     {
@@ -418,9 +392,49 @@ public class AudioClipStorage
 
     private static void DestroyUnregisteredClip(AudioClip? clip)
     {
-        if (clip != null)
+        if (clip is not null)
         {
             UnityEngine.Object.Destroy(clip);
+        }
+    }
+
+    private static string CreateMp3AudioClip(string name, float[] samples, int channels, int sampleRate,
+        out AudioClip? clip)
+    {
+        clip = null;
+        try
+        {
+            clip = AudioClip.Create(name, samples.Length / channels, channels, sampleRate, false);
+            if (clip is null || !clip.SetData(samples, 0))
+            {
+                return "Unity could not create an AudioClip from the decoded MP3 data.";
+            }
+
+            return null!;
+        }
+        catch (Exception exception)
+        {
+            return "Could not create an AudioClip from the MP3 data: " + exception.Message;
+        }
+    }
+
+    private static AudioClip? GetAudioClip(WWW request, AudioType audioType, out string failure)
+    {
+        failure = null!;
+        try
+        {
+            if (!string.IsNullOrEmpty(request.error))
+            {
+                failure = "Could not load the audio file: " + request.error;
+                return null;
+            }
+
+            return request.GetAudioClip(false, false, audioType);
+        }
+        catch (Exception exception)
+        {
+            failure = "Could not decode the audio file: " + exception.Message;
+            return null;
         }
     }
 
@@ -611,12 +625,6 @@ public class AudioClipStorage
             return false;
         }
 
-        if (HasReparsePointInPath(rootPath, rootPrefix, fullPath))
-        {
-            failure = "The audio path cannot pass through a symbolic link or junction.";
-            return false;
-        }
-
         string extension = Path.GetExtension(fullPath);
         if (string.Equals(extension, ".mp3", StringComparison.OrdinalIgnoreCase))
         {
@@ -629,6 +637,12 @@ public class AudioClipStorage
         else
         {
             failure = "Only MP3 and PCM WAV files are supported.";
+            return false;
+        }
+
+        if (HasReparsePointInPath(rootPath, rootPrefix, fullPath))
+        {
+            failure = "The audio path cannot pass through a symbolic link or junction.";
             return false;
         }
 

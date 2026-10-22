@@ -21,7 +21,7 @@
 
     <PackageRoot>$(MSBuildProjectDirectory)\..\publish\$(TargetName)</PackageRoot>
     <ProductionLibraryPath>$(MSBuildProjectDirectory)\..\Blasphemous.NewbieEltonLibs\bin\Release\net35\Blasphemous.NewbieEltonLibs.dll</ProductionLibraryPath>
-    <NLayerAssemblyPath>$(MSBuildProjectDirectory)\..\Blasphemous.NewbieEltonLibs\bin\Release\net35\NLayer.dll</NLayerAssemblyPath>
+    <NLayerAssemblyPath>$(MSBuildProjectDirectory)\..\Blasphemous.NewbieEltonLibs\ThirdParty\NLayer\bin\Release\net35\NLayer.dll</NLayerAssemblyPath>
   </PropertyGroup>
 
   <ItemGroup>
