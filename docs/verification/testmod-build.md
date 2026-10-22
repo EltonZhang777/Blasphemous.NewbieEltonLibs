@@ -8,11 +8,21 @@ the project-owned plugin assemblies plus its localization resource:
 publish/NewbieEltonLibsTestMod/plugins/NewbieEltonLibsTestMod.dll
 publish/NewbieEltonLibsTestMod/plugins/Blasphemous.NewbieEltonLibs.dll
 publish/NewbieEltonLibsTestMod/localization/Newbie Elton Libraries Test Mod.txt
+publish/NewbieEltonLibsTestMod/data/audio/smoke.mp3
+publish/NewbieEltonLibsTestMod/data/audio/smoke.wav
 ```
 
 GameLibs 4.0.67, ModdingAPI 3.0.1, CheatConsole 1.1.0, and Framework.Levels
 0.1.4 are compile-time references only. The package does not copy upstream
 framework or game assemblies; the selected profile supplies those dependencies.
+The two short audio files are fixtures for `newbie-test s5-audio` and are copied
+into the test mod's Data directory so the import flow can exercise both codecs.
+
+In the game console, run `newbie-test s5-audio`. The TestMod logs `S5|mp3`,
+`S5|wav`, `S5|traversal`, and `S5|unsupported` results. Each line records the
+success/failure callback counts and whether an AudioClip was stored; the last
+two cases must fail once without adding an entry. The smoke check imports clips
+without playing them.
 
 From the repository root, use the configured `blasphemous-modding-test` CLI:
 

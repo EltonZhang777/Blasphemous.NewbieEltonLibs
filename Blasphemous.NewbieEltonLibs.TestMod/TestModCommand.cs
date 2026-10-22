@@ -266,6 +266,13 @@ internal sealed class TestModCommand : AutoModCommand
         }
     }
 
+    [ModSubCommand("s5-audio", "verify asynchronous MP3 and PCM WAV import", validLengths: [0])]
+    private void RunAudioImport(string[] parameters)
+    {
+        _mod.StartAudioSmokeCheck();
+        Write("S5 audio import smoke check started; inspect S5| logs for callback and storage results.");
+    }
+
     [ModSubCommand("s3-stop", "set the tracked ModAnimator animation to null", validLengths: [0])]
     private void StopResources(string[] parameters)
     {
