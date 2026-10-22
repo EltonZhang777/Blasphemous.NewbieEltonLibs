@@ -191,7 +191,7 @@ public static class ModFlagsManager
         return false;
     }
 
-    private static bool TryResolveMod(Type? modType, Assembly callingAssembly, out BlasMod? mod)
+    internal static bool TryResolveMod(Type? modType, Assembly callingAssembly, out BlasMod? mod)
     {
         mod = null;
         if (modType != null && (!typeof(BlasMod).IsAssignableFrom(modType) || modType.IsAbstract))
