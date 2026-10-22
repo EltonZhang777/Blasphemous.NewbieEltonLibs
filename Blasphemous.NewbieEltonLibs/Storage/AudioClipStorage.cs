@@ -16,16 +16,25 @@ public class AudioClipStorage
     private readonly Dictionary<string, AudioClip> _clips = [];
     private readonly HashSet<string> _pendingImports = [];
     private readonly Func<AudioClip, bool> _validateClip;
+    private readonly Func<string, WWW> _createRequest;
+    private readonly Action<WWW> _disposeRequest;
 
     /// <summary>Creates an empty AudioClip storage.</summary>
     public AudioClipStorage()
-        : this(IsValidClip)
+        : this(IsValidClip, CreateRequest, DisposeRequest)
     {
     }
 
     internal AudioClipStorage(Func<AudioClip, bool> validateClip)
+        : this(validateClip, CreateRequest, DisposeRequest)
+    {
+    }
+
+    internal AudioClipStorage(Func<AudioClip, bool> validateClip, Func<string, WWW> createRequest, Action<WWW> disposeRequest)
     {
         _validateClip = validateClip;
+        _createRequest = createRequest;
+        _disposeRequest = disposeRequest;
     }
 
     /// <summary>Gets the required AudioClip registered under a name.</summary>
@@ -131,8 +140,9 @@ public class AudioClipStorage
     /// <param name="name">The name under which to register the imported AudioClip.</param>
     /// <param name="relativePath">An MP3 or PCM WAV path relative to the mod's Data directory.</param>
     /// <param name="onSuccess">Called once with the requested name and registered AudioClip after a successful import.</param>
-    /// <param name="onFailure">Called once with the requested name and a failure message when import fails or its coroutine is stopped before completion.</param>
+    /// <param name="onFailure">Called once with the requested name and a failure message when import fails or a started coroutine is stopped before completion.</param>
     /// <returns>A coroutine that the consuming mod must start with Unity.</returns>
+    /// <remarks>Import work and the name reservation begin when Unity first advances the returned coroutine. A coroutine that is never started invokes no callback.</remarks>
     /// <exception cref="ArgumentNullException">Thrown when a callback is <see langword="null" />.</exception>
     public IEnumerator ImportAsync(FileHandler fileHandler, string name, string relativePath,
         Action<string, AudioClip> onSuccess, Action<string, string> onFailure)
@@ -147,11 +157,6 @@ public class AudioClipStorage
             throw new ArgumentNullException(nameof(onFailure));
         }
 
-        if (!TryReserveImportName(name, out string reservationFailure))
-        {
-            return FailImport(name, reservationFailure, onFailure);
-        }
-
         return ImportCore(fileHandler, name, relativePath, onSuccess, onFailure);
     }
 
@@ -160,11 +165,19 @@ public class AudioClipStorage
     {
         WWW? request = null;
         AudioClip? clip = null;
-        bool reservationHeld = true;
+        bool reservationHeld = false;
         bool callbackDelivered = false;
 
         try
         {
+            if (!TryReserveImportName(name, out string reservationFailure))
+            {
+                callbackDelivered = true;
+                onFailure(name, reservationFailure);
+                yield break;
+            }
+
+            reservationHeld = true;
             string fullPath = null!;
             AudioType audioType = AudioType.UNKNOWN;
             string failure = null!;
@@ -190,7 +203,7 @@ public class AudioClipStorage
 
             try
             {
-                request = new WWW(new Uri(fullPath).AbsoluteUri);
+                request = _createRequest(new Uri(fullPath).AbsoluteUri);
             }
             catch (Exception exception)
             {
@@ -227,7 +240,7 @@ public class AudioClipStorage
 
             try
             {
-                request.Dispose();
+                _disposeRequest(request);
             }
             catch (Exception exception)
             {
@@ -279,14 +292,14 @@ public class AudioClipStorage
                 {
                     try
                     {
-                        request.Dispose();
+                        _disposeRequest(request);
                     }
                     catch (Exception)
                     {
                     }
                 }
 
-                if (clip != null && !_clips.ContainsKey(name))
+                if (clip is not null && !_clips.ContainsKey(name))
                 {
                     DestroyUnregisteredClip(clip);
                 }
@@ -327,12 +340,6 @@ public class AudioClipStorage
         _clips.Add(name, clip);
         _pendingImports.Remove(name);
         return true;
-    }
-
-    private static IEnumerator FailImport(string name, string failure, Action<string, string> onFailure)
-    {
-        onFailure(name, failure);
-        yield break;
     }
 
     private static void DestroyUnregisteredClip(AudioClip? clip)
@@ -453,6 +460,33 @@ public class AudioClipStorage
 
     private static bool HasReparsePointInPath(string rootPath, string rootPrefix, string fullPath)
     {
+        StringComparison pathComparison = Path.DirectorySeparatorChar == '\\'
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        string pathRoot = Path.GetPathRoot(rootPath)!;
+        string rootBoundary = pathRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        string ancestorPath = rootPath;
+        while (!string.IsNullOrEmpty(ancestorPath))
+        {
+            if (IsReparsePoint(ancestorPath))
+            {
+                return true;
+            }
+
+            if (string.Equals(ancestorPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), rootBoundary, pathComparison))
+            {
+                break;
+            }
+
+            string? parentPath = Path.GetDirectoryName(ancestorPath);
+            if (string.IsNullOrEmpty(parentPath) || string.Equals(parentPath, ancestorPath, pathComparison))
+            {
+                break;
+            }
+
+            ancestorPath = parentPath;
+        }
+
         string relativePath = fullPath.Substring(rootPrefix.Length);
         string currentPath = rootPath;
         string[] segments = relativePath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
@@ -460,32 +494,37 @@ public class AudioClipStorage
         for (int i = 0; i < segments.Length; i++)
         {
             currentPath = Path.Combine(currentPath, segments[i]);
-            try
-            {
-                if ((File.GetAttributes(currentPath) & FileAttributes.ReparsePoint) != 0)
-                {
-                    return true;
-                }
-            }
-            catch (FileNotFoundException)
-            {
-                return false;
-            }
-            catch (DirectoryNotFoundException)
-            {
-                return false;
-            }
-            catch (IOException)
-            {
-                return true;
-            }
-            catch (UnauthorizedAccessException)
+            if (IsReparsePoint(currentPath))
             {
                 return true;
             }
         }
 
         return false;
+    }
+
+    private static bool IsReparsePoint(string path)
+    {
+        try
+        {
+            return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
+        }
+        catch (FileNotFoundException)
+        {
+            return false;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return false;
+        }
+        catch (IOException)
+        {
+            return true;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return true;
+        }
     }
 
     private static bool IsPcmWaveFile(string path)
@@ -549,5 +588,15 @@ public class AudioClipStorage
     private static bool IsValidClip(AudioClip value)
     {
         return value is not null && value != null;
+    }
+
+    private static WWW CreateRequest(string url)
+    {
+        return new WWW(url);
+    }
+
+    private static void DisposeRequest(WWW request)
+    {
+        request.Dispose();
     }
 }
