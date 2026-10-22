@@ -29,6 +29,7 @@
 			<Private>true</Private>
 		</ProjectReference>
 		<None Include="$(MSBuildProjectDirectory)\ThirdParty\NLayer\bin\$(Configuration)\net35\NLayer.dll" Pack="true" PackagePath="lib/net35/" Visible="false" />
+		<None Include="$(MSBuildProjectDirectory)\..\THIRD-PARTY-NOTICES.txt" Pack="true" PackagePath="" Visible="false" />
 	</ItemGroup>
 
   <Target Name="Development" AfterTargets="Build">

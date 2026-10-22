@@ -26,8 +26,9 @@ desktop Unity runtime does not support runtime MP3 decoding through
 In the game console, run `newbie-test s5-audio`. The TestMod logs `S5|mp3`,
 `S5|wav`, `S5|traversal`, and `S5|unsupported` results. Each line records the
 success/failure callback counts and whether an AudioClip was stored; the last
-two cases must fail once without adding an entry. The smoke check imports clips
-without playing them.
+two cases must fail once without adding an entry. The smoke check does not play
+the clips. TestMod destroys each successful fixture clip after checking its
+callback and storage result; AudioClipStorage does not own or destroy clips.
 
 From the repository root, use the configured `blasphemous-modding-test` CLI:
 
