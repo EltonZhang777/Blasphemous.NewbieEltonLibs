@@ -52,6 +52,21 @@ public sealed class AudioClipStorageTests
         Assert.False(second.TryGet("shared-name", out _));
     }
 
+    /// <summary>Verifies an MP3 fixture decodes into interleaved PCM samples.</summary>
+    [Fact]
+    public void AudioClipImportDecodesMp3Fixture()
+    {
+        string mp3Path = Path.Combine(AppContext.BaseDirectory, "AudioFixtures", "audio", "smoke.mp3");
+
+        float[] samples = AudioClipStorage.DecodeMp3(mp3Path, out int channels, out int sampleRate);
+
+        Assert.NotEmpty(samples);
+        Assert.InRange(channels, 1, 2);
+        Assert.True(sampleRate > 0);
+        Assert.Equal(0, samples.Length % channels);
+        Assert.True(Array.Exists(samples, sample => sample != 0f));
+    }
+
     /// <summary>Verifies invalid names and null clips follow strict/Try validation.</summary>
     [Fact]
     public void AudioClipStorageRejectsInvalidNamesAndNullClips()
@@ -110,7 +125,7 @@ public sealed class AudioClipStorageTests
         Assert.Equal(0, successCount);
         Assert.Equal(1, failureCount);
         Assert.Equal("unsupported", callbackName);
-        Assert.False(string.IsNullOrEmpty(failure));
+        Assert.Equal("Only MP3 and PCM WAV files are supported.", failure);
         Assert.False(storage.TryGet("unsupported", out _));
     }
 

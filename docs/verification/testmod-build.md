@@ -1,15 +1,17 @@
 # TestMod build and deployment contract
 
 `Blasphemous.NewbieEltonLibs.TestMod` is an external net35 consumer. Its
-Debug build consumes the production library built in Release and packages only
-the project-owned plugin assemblies plus its localization resource:
+Debug build consumes the production library built in Release and packages its
+plugin assemblies, the MP3 decoder dependency and its localization resource:
 
 ```text
 publish/NewbieEltonLibsTestMod/plugins/NewbieEltonLibsTestMod.dll
 publish/NewbieEltonLibsTestMod/plugins/Blasphemous.NewbieEltonLibs.dll
+publish/NewbieEltonLibsTestMod/plugins/NLayer.dll
 publish/NewbieEltonLibsTestMod/localization/Newbie Elton Libraries Test Mod.txt
 publish/NewbieEltonLibsTestMod/data/Newbie Elton Libraries Test Mod/audio/smoke.mp3
 publish/NewbieEltonLibsTestMod/data/Newbie Elton Libraries Test Mod/audio/smoke.wav
+publish/NewbieEltonLibsTestMod/THIRD-PARTY-NOTICES.txt
 ```
 
 GameLibs 4.0.67, ModdingAPI 3.0.1, CheatConsole 1.1.0, and Framework.Levels
@@ -17,6 +19,8 @@ GameLibs 4.0.67, ModdingAPI 3.0.1, CheatConsole 1.1.0, and Framework.Levels
 framework or game assemblies; the selected profile supplies those dependencies.
 The two short audio files are fixtures for `newbie-test s5-audio` and are copied
 into the test mod's Data directory so the import flow can exercise both codecs.
+NLayer decodes MP3 to PCM because the game's desktop Unity runtime does not
+support runtime MP3 decoding through `WWW.GetAudioClip`.
 
 In the game console, run `newbie-test s5-audio`. The TestMod logs `S5|mp3`,
 `S5|wav`, `S5|traversal`, and `S5|unsupported` results. Each line records the

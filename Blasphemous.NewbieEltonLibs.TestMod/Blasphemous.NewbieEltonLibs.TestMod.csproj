@@ -21,6 +21,7 @@
 
     <PackageRoot>$(MSBuildProjectDirectory)\..\publish\$(TargetName)</PackageRoot>
     <ProductionLibraryPath>$(MSBuildProjectDirectory)\..\Blasphemous.NewbieEltonLibs\bin\Release\net35\Blasphemous.NewbieEltonLibs.dll</ProductionLibraryPath>
+    <NLayerAssemblyPath>$(MSBuildProjectDirectory)\..\Blasphemous.NewbieEltonLibs\bin\Release\net35\NLayer.dll</NLayerAssemblyPath>
   </PropertyGroup>
 
   <ItemGroup>
@@ -42,8 +43,10 @@
     <MakeDir Directories="$(PackageRoot)\data\$(Title)\audio" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PackageRoot)\plugins" />
     <Copy SourceFiles="$(ProductionLibraryPath)" DestinationFolder="$(PackageRoot)\plugins" />
+    <Copy SourceFiles="$(NLayerAssemblyPath)" DestinationFolder="$(PackageRoot)\plugins" />
     <Copy SourceFiles="@(LocalizationFiles)" DestinationFolder="$(PackageRoot)\localization" />
     <Copy SourceFiles="@(AudioSmokeFiles)" DestinationFolder="$(PackageRoot)\data\$(Title)\audio" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\THIRD-PARTY-NOTICES.txt" DestinationFolder="$(PackageRoot)" />
   </Target>
 
 </Project>

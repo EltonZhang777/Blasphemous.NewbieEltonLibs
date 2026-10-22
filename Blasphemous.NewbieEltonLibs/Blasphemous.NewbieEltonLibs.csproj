@@ -20,6 +20,7 @@
 	  <PackageReference Include="Blasphemous.Framework.Levels" Version="0.1.4" />
 	  <PackageReference Include="Blasphemous.ModdingAPI" Version="3.0.1" />
 	  <PackageReference Include="Blasphemous.CheatConsole" Version="1.1.0" />
+    <PackageReference Include="NLayer" Version="1.12.0" />
 	</ItemGroup>
 
   <Target Name="Development" AfterTargets="Build">

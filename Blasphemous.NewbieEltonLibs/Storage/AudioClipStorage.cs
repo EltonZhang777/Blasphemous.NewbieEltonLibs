@@ -1,11 +1,13 @@
 using Blasphemous.ModdingAPI.Files;
 using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
 using Blasphemous.NewbieEltonLibs.Extensions.System;
+using NLayer;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
 using UnityEngine;
 
 namespace Blasphemous.NewbieEltonLibs.Storage;
@@ -18,6 +20,22 @@ public class AudioClipStorage
     private readonly Func<AudioClip, bool> _validateClip;
     private readonly Func<string, WWW> _createRequest;
     private readonly Action<WWW> _disposeRequest;
+
+    private sealed class Mp3DecodeOperation
+    {
+        public readonly string FullPath;
+        public volatile bool Cancelled;
+        public volatile bool Completed;
+        public float[]? Samples;
+        public int Channels;
+        public int SampleRate;
+        public Exception? Error;
+
+        public Mp3DecodeOperation(string fullPath)
+        {
+            FullPath = fullPath;
+        }
+    }
 
     /// <summary>Creates an empty AudioClip storage.</summary>
     public AudioClipStorage()
@@ -164,6 +182,7 @@ public class AudioClipStorage
         Action<string, AudioClip> onSuccess, Action<string, string> onFailure)
     {
         WWW? request = null;
+        Mp3DecodeOperation? mp3Decode = null;
         AudioClip? clip = null;
         bool reservationHeld = false;
         bool callbackDelivered = false;
@@ -201,55 +220,105 @@ public class AudioClipStorage
                 yield break;
             }
 
-            try
+            if (audioType == AudioType.MPEG)
             {
-                request = _createRequest(new Uri(fullPath).AbsoluteUri);
-            }
-            catch (Exception exception)
-            {
-                failure = "Could not start the audio import: " + exception.Message;
-            }
-
-            if (request == null)
-            {
-                _pendingImports.Remove(name);
-                reservationHeld = false;
-                callbackDelivered = true;
-                onFailure(name, failure ?? "Unity could not create the audio request.");
-                yield break;
-            }
-
-            yield return request;
-
-            failure = null!;
-            try
-            {
-                if (!string.IsNullOrEmpty(request.error))
+                mp3Decode = new Mp3DecodeOperation(fullPath);
+                try
                 {
-                    failure = "Could not load the audio file: " + request.error;
+                    if (!ThreadPool.QueueUserWorkItem(DecodeMp3OnWorker, mp3Decode))
+                    {
+                        failure = "Could not queue MP3 decoding.";
+                    }
+                }
+                catch (Exception exception)
+                {
+                    failure = "Could not start MP3 decoding: " + exception.Message;
+                }
+
+                if (failure == null)
+                {
+                    yield return null;
+                    while (!mp3Decode.Completed)
+                    {
+                        yield return null;
+                    }
+
+                    if (mp3Decode.Error != null)
+                    {
+                        failure = "Could not decode the MP3 file: " + mp3Decode.Error.Message;
+                    }
+                    else if (mp3Decode.Samples == null || mp3Decode.Channels <= 0 || mp3Decode.SampleRate <= 0)
+                    {
+                        failure = "The MP3 decoder returned invalid audio data.";
+                    }
+                    else
+                    {
+                        try
+                        {
+                            clip = AudioClip.Create(name, mp3Decode.Samples.Length / mp3Decode.Channels,
+                                mp3Decode.Channels, mp3Decode.SampleRate, false);
+                            if (clip == null || !clip.SetData(mp3Decode.Samples, 0))
+                            {
+                                failure = "Unity could not create an AudioClip from the decoded MP3 data.";
+                            }
+                        }
+                        catch (Exception exception)
+                        {
+                            failure = "Could not create an AudioClip from the MP3 data: " + exception.Message;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                try
+                {
+                    request = _createRequest(new Uri(fullPath).AbsoluteUri);
+                }
+                catch (Exception exception)
+                {
+                    failure = "Could not start the audio import: " + exception.Message;
+                }
+
+                if (request == null)
+                {
+                    failure ??= "Unity could not create the audio request.";
                 }
                 else
                 {
-                    clip = request.GetAudioClip(false, false, audioType);
-                }
-            }
-            catch (Exception exception)
-            {
-                failure = "Could not decode the audio file: " + exception.Message;
-            }
+                    yield return request;
 
-            try
-            {
-                _disposeRequest(request);
-            }
-            catch (Exception exception)
-            {
-                if (failure == null)
-                {
-                    failure = "Could not release the audio request: " + exception.Message;
+                    failure = null!;
+                    try
+                    {
+                        if (!string.IsNullOrEmpty(request.error))
+                        {
+                            failure = "Could not load the audio file: " + request.error;
+                        }
+                        else
+                        {
+                            clip = request.GetAudioClip(false, false, audioType);
+                        }
+                    }
+                    catch (Exception exception)
+                    {
+                        failure = "Could not decode the audio file: " + exception.Message;
+                    }
+
+                    try
+                    {
+                        _disposeRequest(request);
+                    }
+                    catch (Exception exception)
+                    {
+                        if (failure == null)
+                        {
+                            failure = "Could not release the audio request: " + exception.Message;
+                        }
+                    }
+                    request = null;
                 }
             }
-            request = null;
 
             if (failure != null)
             {
@@ -288,6 +357,11 @@ public class AudioClipStorage
         {
             if (reservationHeld && !callbackDelivered)
             {
+                if (mp3Decode != null)
+                {
+                    mp3Decode.Cancelled = true;
+                }
+
                 if (request != null)
                 {
                     try
@@ -347,6 +421,121 @@ public class AudioClipStorage
         if (clip != null)
         {
             UnityEngine.Object.Destroy(clip);
+        }
+    }
+
+    internal static float[] DecodeMp3(string fullPath, out int channels, out int sampleRate)
+    {
+        return DecodeMp3(fullPath, null, out channels, out sampleRate);
+    }
+
+    private static float[] DecodeMp3(string fullPath, Func<bool>? isCancellationRequested,
+        out int channels, out int sampleRate)
+    {
+        using (MpegFile decoder = new MpegFile(fullPath))
+        {
+            channels = decoder.Channels;
+            sampleRate = decoder.SampleRate;
+            if (channels <= 0 || sampleRate <= 0)
+            {
+                throw new FormatException("The MP3 file has invalid audio metadata.");
+            }
+
+            long decodedLength = decoder.Length;
+            if (decodedLength > 0 && decodedLength % sizeof(float) != 0)
+            {
+                throw new FormatException("The MP3 decoder returned an invalid data length.");
+            }
+
+            long expectedSamples = decodedLength > 0 ? decodedLength / sizeof(float) : 0;
+            if (expectedSamples > int.MaxValue)
+            {
+                throw new FormatException("The decoded MP3 is too large for a Unity AudioClip.");
+            }
+
+            float[] samples = new float[(int)expectedSamples];
+            float[] buffer = new float[4096];
+            int sampleCount = 0;
+            int readCount;
+            while (true)
+            {
+                if (isCancellationRequested != null && isCancellationRequested())
+                {
+                    throw new OperationCanceledException();
+                }
+
+                readCount = decoder.ReadSamples(buffer, 0, buffer.Length);
+                if (readCount == 0)
+                {
+                    break;
+                }
+
+                if (sampleCount > int.MaxValue - readCount)
+                {
+                    throw new FormatException("The decoded MP3 is too large for a Unity AudioClip.");
+                }
+
+                int requiredSamples = sampleCount + readCount;
+                if (requiredSamples > samples.Length)
+                {
+                    int capacity = samples.Length == 0 ? buffer.Length : samples.Length;
+                    while (capacity < requiredSamples)
+                    {
+                        if (capacity > int.MaxValue / 2)
+                        {
+                            capacity = requiredSamples;
+                            break;
+                        }
+
+                        capacity *= 2;
+                    }
+
+                    Array.Resize(ref samples, capacity);
+                }
+
+                Array.Copy(buffer, 0, samples, sampleCount, readCount);
+                sampleCount = requiredSamples;
+            }
+
+            if (sampleCount == 0 || sampleCount % channels != 0)
+            {
+                throw new FormatException("The MP3 file contains no complete decodable audio frames.");
+            }
+
+            if (sampleCount != samples.Length)
+            {
+                Array.Resize(ref samples, sampleCount);
+            }
+
+            return samples;
+        }
+    }
+
+    private static void DecodeMp3OnWorker(object? state)
+    {
+        Mp3DecodeOperation operation = (Mp3DecodeOperation)state!;
+        try
+        {
+            operation.Samples = DecodeMp3(operation.FullPath, () => operation.Cancelled,
+                out operation.Channels, out operation.SampleRate);
+        }
+        catch (OperationCanceledException)
+        {
+            if (!operation.Cancelled)
+            {
+                operation.Error = new FormatException("MP3 decoding was interrupted.");
+            }
+        }
+        catch (Exception exception)
+        {
+            if (!operation.Cancelled)
+            {
+                operation.Error = exception;
+            }
+        }
+        finally
+        {
+            operation.Completed = true;
         }
     }
 
