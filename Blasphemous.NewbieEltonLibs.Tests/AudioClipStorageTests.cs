@@ -72,12 +72,14 @@ public sealed class AudioClipStorageTests
         FileHandler fileHandler = CreateFileHandler(AppContext.BaseDirectory);
         int successCount = 0;
         int failureCount = 0;
+        string? callbackName = null;
         string? failure = null;
 
         IEnumerator traversal = storage.ImportAsync(fileHandler, "traversal", "../outside.mp3",
-            _ => successCount++, message =>
+            (_, _) => successCount++, (name, message) =>
             {
                 failureCount++;
+                callbackName = name;
                 failure = message;
             });
 
@@ -85,16 +87,19 @@ public sealed class AudioClipStorageTests
         Assert.False(traversal.MoveNext());
         Assert.Equal(0, successCount);
         Assert.Equal(1, failureCount);
+        Assert.Equal("traversal", callbackName);
         Assert.False(string.IsNullOrEmpty(failure));
         Assert.False(storage.TryGet("traversal", out _));
 
         successCount = 0;
         failureCount = 0;
+        callbackName = null;
         failure = null;
         IEnumerator unsupported = storage.ImportAsync(fileHandler, "unsupported", "audio/clip.ogg",
-            _ => successCount++, message =>
+            (_, _) => successCount++, (name, message) =>
             {
                 failureCount++;
+                callbackName = name;
                 failure = message;
             });
 
@@ -102,6 +107,7 @@ public sealed class AudioClipStorageTests
         Assert.False(unsupported.MoveNext());
         Assert.Equal(0, successCount);
         Assert.Equal(1, failureCount);
+        Assert.Equal("unsupported", callbackName);
         Assert.False(string.IsNullOrEmpty(failure));
         Assert.False(storage.TryGet("unsupported", out _));
     }
@@ -115,12 +121,14 @@ public sealed class AudioClipStorageTests
         FileHandler fileHandler = CreateFileHandler(dataPath);
         int successCount = 0;
         int failureCount = 0;
+        string? callbackName = null;
         string? failure = null;
 
         IEnumerator import = storage.ImportAsync(fileHandler, "float-wave", "audio/non-pcm.wav",
-            _ => successCount++, message =>
+            (_, _) => successCount++, (name, message) =>
             {
                 failureCount++;
+                callbackName = name;
                 failure = message;
             });
 
@@ -128,6 +136,7 @@ public sealed class AudioClipStorageTests
         Assert.False(import.MoveNext());
         Assert.Equal(0, successCount);
         Assert.Equal(1, failureCount);
+        Assert.Equal("float-wave", callbackName);
         Assert.False(string.IsNullOrEmpty(failure));
         Assert.False(storage.TryGet("float-wave", out _));
     }
@@ -142,12 +151,14 @@ public sealed class AudioClipStorageTests
         FileHandler fileHandler = CreateFileHandler(AppContext.BaseDirectory);
         int successCount = 0;
         int failureCount = 0;
+        string? callbackName = null;
         string? failure = null;
 
         IEnumerator import = storage.ImportAsync(fileHandler, "existing", "audio/clip.mp3",
-            _ => successCount++, message =>
+            (_, _) => successCount++, (name, message) =>
             {
                 failureCount++;
+                callbackName = name;
                 failure = message;
             });
 
@@ -155,9 +166,45 @@ public sealed class AudioClipStorageTests
         Assert.False(import.MoveNext());
         Assert.Equal(0, successCount);
         Assert.Equal(1, failureCount);
+        Assert.Equal("existing", callbackName);
         Assert.False(string.IsNullOrEmpty(failure));
         Assert.True(storage.TryGet("existing", out AudioClip? stored));
         Assert.Same(existing, stored);
+    }
+
+    /// <summary>Verifies an in-flight import reserves its name until the terminal callback.</summary>
+    [Fact]
+    public void AudioClipImportReservesNameUntilItCompletes()
+    {
+        AudioClipStorage storage = CreateStorage();
+        FileHandler fileHandler = CreateFileHandler(AppContext.BaseDirectory);
+        int firstFailureCount = 0;
+        int secondFailureCount = 0;
+        string? firstFailureName = null;
+        string? secondFailureName = null;
+
+        IEnumerator firstImport = storage.ImportAsync(fileHandler, "pending", "../outside.mp3",
+            (_, _) => { }, (name, _) =>
+            {
+                firstFailureCount++;
+                firstFailureName = name;
+            });
+        Assert.False(storage.TryRegister("pending", CreateAudioClip()));
+
+        IEnumerator secondImport = storage.ImportAsync(fileHandler, "pending", "../outside.mp3",
+            (_, _) => { }, (name, _) =>
+            {
+                secondFailureCount++;
+                secondFailureName = name;
+            });
+
+        Assert.False(firstImport.MoveNext());
+        Assert.False(secondImport.MoveNext());
+        Assert.Equal(1, firstFailureCount);
+        Assert.Equal(1, secondFailureCount);
+        Assert.Equal("pending", firstFailureName);
+        Assert.Equal("pending", secondFailureName);
+        Assert.True(storage.TryRegister("pending", CreateAudioClip()));
     }
 
     private static AudioClipStorage CreateStorage()

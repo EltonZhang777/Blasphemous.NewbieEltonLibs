@@ -101,28 +101,31 @@ internal sealed class NewbieEltonLibsTestMod : BlasMod
     {
         int successCount = 0;
         int failureCount = 0;
+        string? callbackName = null;
         AudioClip? importedClip = null;
         string? failure = null;
 
         yield return _audioClips.ImportAsync(FileHandler, name, path,
-            clip =>
+            (completedName, clip) =>
             {
                 successCount++;
+                callbackName = completedName;
                 importedClip = clip;
             },
-            message =>
+            (completedName, message) =>
             {
                 failureCount++;
+                callbackName = completedName;
                 failure = message;
             });
         yield return null;
 
         bool stored = _audioClips.TryGet(name, out AudioClip? storedClip);
         bool passed = expectSuccess
-            ? successCount == 1 && failureCount == 0 && stored && storedClip == importedClip
-            : successCount == 0 && failureCount == 1 && !stored;
+            ? successCount == 1 && failureCount == 0 && callbackName == name && stored && storedClip == importedClip
+            : successCount == 0 && failureCount == 1 && callbackName == name && !stored;
 
-        Log($"S5|{label}|{(passed ? "PASS" : "FAIL")}|success={successCount}|failure={failureCount}|stored={stored}|reason={failure ?? "none"}");
+        Log($"S5|{label}|{(passed ? "PASS" : "FAIL")}|success={successCount}|failure={failureCount}|name={callbackName ?? "none"}|stored={stored}|reason={failure ?? "none"}");
     }
 
     internal void TrackAnimator(ModAnimator animator, SpriteRenderer renderer, Sprite[] frames)

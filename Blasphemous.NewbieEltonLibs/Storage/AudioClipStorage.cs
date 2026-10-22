@@ -14,6 +14,7 @@ namespace Blasphemous.NewbieEltonLibs.Storage;
 public class AudioClipStorage
 {
     private readonly Dictionary<string, AudioClip> _clips = [];
+    private readonly HashSet<string> _pendingImports = [];
     private readonly Func<AudioClip, bool> _validateClip;
 
     /// <summary>Creates an empty AudioClip storage.</summary>
@@ -48,15 +49,15 @@ public class AudioClipStorage
     /// <param name="name">The name that identifies the AudioClip.</param>
     /// <param name="clip">The AudioClip to register.</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="name" /> or <paramref name="clip" /> is invalid.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when <paramref name="name" /> is already registered.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when <paramref name="name" /> is registered or has an import in progress.</exception>
     public void Register(string name, AudioClip clip)
     {
         ValidateName(name, true);
         ValidateClip(clip, true);
 
-        if (_clips.ContainsKey(name))
+        if (_clips.ContainsKey(name) || _pendingImports.Contains(name))
         {
-            throw new InvalidOperationException("AudioClip '" + name + "' is already registered.");
+            throw new InvalidOperationException("AudioClip '" + name + "' is already registered or being imported.");
         }
 
         _clips.Add(name, clip);
@@ -83,10 +84,10 @@ public class AudioClipStorage
     /// <summary>Attempts to register an AudioClip without throwing for expected failures.</summary>
     /// <param name="name">The name that identifies the AudioClip.</param>
     /// <param name="clip">The AudioClip to register.</param>
-    /// <returns><see langword="true" /> when registered; otherwise, <see langword="false" />.</returns>
+    /// <returns><see langword="true" /> when registered; otherwise, <see langword="false" /> when the name is invalid, registered, importing, or the clip is invalid.</returns>
     public bool TryRegister(string name, AudioClip clip)
     {
-        if (!ValidateName(name, false) || !ValidateClip(clip, false) || _clips.ContainsKey(name))
+        if (!ValidateName(name, false) || !ValidateClip(clip, false) || _clips.ContainsKey(name) || _pendingImports.Contains(name))
         {
             return false;
         }
@@ -129,12 +130,12 @@ public class AudioClipStorage
     /// <param name="fileHandler">The consuming mod's file handler.</param>
     /// <param name="name">The name under which to register the imported AudioClip.</param>
     /// <param name="relativePath">An MP3 or PCM WAV path relative to the mod's Data directory.</param>
-    /// <param name="onSuccess">Called once with the registered AudioClip after a successful import.</param>
-    /// <param name="onFailure">Called once with a failure message when import fails.</param>
+    /// <param name="onSuccess">Called once with the requested name and registered AudioClip after a successful import.</param>
+    /// <param name="onFailure">Called once with the requested name and a failure message when import fails.</param>
     /// <returns>A coroutine that the consuming mod must start with Unity.</returns>
     /// <exception cref="ArgumentNullException">Thrown when a callback is <see langword="null" />.</exception>
     public IEnumerator ImportAsync(FileHandler fileHandler, string name, string relativePath,
-        Action<AudioClip> onSuccess, Action<string> onFailure)
+        Action<string, AudioClip> onSuccess, Action<string, string> onFailure)
     {
         if (onSuccess == null)
         {
@@ -146,11 +147,16 @@ public class AudioClipStorage
             throw new ArgumentNullException(nameof(onFailure));
         }
 
+        if (!TryReserveImportName(name, out string reservationFailure))
+        {
+            return FailImport(name, reservationFailure, onFailure);
+        }
+
         return ImportCore(fileHandler, name, relativePath, onSuccess, onFailure);
     }
 
     private IEnumerator ImportCore(FileHandler fileHandler, string name, string relativePath,
-        Action<AudioClip> onSuccess, Action<string> onFailure)
+        Action<string, AudioClip> onSuccess, Action<string, string> onFailure)
     {
         string fullPath = null!;
         AudioType audioType = AudioType.UNKNOWN;
@@ -168,7 +174,8 @@ public class AudioClipStorage
 
         if (!prepared)
         {
-            onFailure(failure);
+            _pendingImports.Remove(name);
+            onFailure(name, failure);
             yield break;
         }
 
@@ -184,7 +191,8 @@ public class AudioClipStorage
 
         if (request == null)
         {
-            onFailure(failure ?? "Unity could not create the audio request.");
+            _pendingImports.Remove(name);
+            onFailure(name, failure ?? "Unity could not create the audio request.");
             yield break;
         }
 
@@ -222,23 +230,72 @@ public class AudioClipStorage
 
         if (failure != null)
         {
-            onFailure(failure);
+            DestroyUnregisteredClip(clip);
+            _pendingImports.Remove(name);
+            onFailure(name, failure);
             yield break;
         }
 
         if (clip == null)
         {
-            onFailure("Unity could not decode the audio file.");
+            _pendingImports.Remove(name);
+            onFailure(name, "Unity could not decode the audio file.");
             yield break;
         }
 
-        if (!TryRegister(name, clip))
+        if (!TryCompleteImport(name, clip))
         {
-            onFailure("The AudioClip name is invalid or already registered.");
+            DestroyUnregisteredClip(clip);
+            _pendingImports.Remove(name);
+            onFailure(name, "The AudioClip name is invalid or already registered.");
             yield break;
         }
 
-        onSuccess(clip);
+        onSuccess(name, clip);
+    }
+
+    private bool TryReserveImportName(string name, out string failure)
+    {
+        if (!ValidateName(name, false))
+        {
+            failure = "The AudioClip name is empty.";
+            return false;
+        }
+
+        if (_clips.ContainsKey(name) || !_pendingImports.Add(name))
+        {
+            failure = "An AudioClip with that name is already registered or being imported.";
+            return false;
+        }
+
+        failure = null!;
+        return true;
+    }
+
+    private bool TryCompleteImport(string name, AudioClip clip)
+    {
+        if (!_pendingImports.Contains(name) || _clips.ContainsKey(name) || !ValidateClip(clip, false))
+        {
+            return false;
+        }
+
+        _clips.Add(name, clip);
+        _pendingImports.Remove(name);
+        return true;
+    }
+
+    private static IEnumerator FailImport(string name, string failure, Action<string, string> onFailure)
+    {
+        onFailure(name, failure);
+        yield break;
+    }
+
+    private static void DestroyUnregisteredClip(AudioClip? clip)
+    {
+        if (clip != null)
+        {
+            UnityEngine.Object.Destroy(clip);
+        }
     }
 
     private bool TryPrepareImport(FileHandler fileHandler, string name, string relativePath,
@@ -304,9 +361,18 @@ public class AudioClipStorage
             rootPrefix += Path.DirectorySeparatorChar;
         }
 
-        if (!fullPath.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+        StringComparison pathComparison = Path.DirectorySeparatorChar == '\\'
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        if (!fullPath.StartsWith(rootPrefix, pathComparison))
         {
             failure = "The audio path resolves outside the consuming mod's Data directory.";
+            return false;
+        }
+
+        if (HasReparsePointInPath(rootPath, rootPrefix, fullPath))
+        {
+            failure = "The audio path cannot pass through a symbolic link or junction.";
             return false;
         }
 
@@ -338,6 +404,43 @@ public class AudioClipStorage
         }
 
         return true;
+    }
+
+    private static bool HasReparsePointInPath(string rootPath, string rootPrefix, string fullPath)
+    {
+        string relativePath = fullPath.Substring(rootPrefix.Length);
+        string currentPath = rootPath;
+        string[] segments = relativePath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+
+        for (int i = 0; i < segments.Length; i++)
+        {
+            currentPath = Path.Combine(currentPath, segments[i]);
+            try
+            {
+                if ((File.GetAttributes(currentPath) & FileAttributes.ReparsePoint) != 0)
+                {
+                    return true;
+                }
+            }
+            catch (FileNotFoundException)
+            {
+                return false;
+            }
+            catch (DirectoryNotFoundException)
+            {
+                return false;
+            }
+            catch (IOException)
+            {
+                return true;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool IsPcmWaveFile(string path)
