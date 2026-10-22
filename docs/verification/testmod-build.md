@@ -8,8 +8,8 @@ the project-owned plugin assemblies plus its localization resource:
 publish/NewbieEltonLibsTestMod/plugins/NewbieEltonLibsTestMod.dll
 publish/NewbieEltonLibsTestMod/plugins/Blasphemous.NewbieEltonLibs.dll
 publish/NewbieEltonLibsTestMod/localization/Newbie Elton Libraries Test Mod.txt
-publish/NewbieEltonLibsTestMod/data/audio/smoke.mp3
-publish/NewbieEltonLibsTestMod/data/audio/smoke.wav
+publish/NewbieEltonLibsTestMod/data/Newbie Elton Libraries Test Mod/audio/smoke.mp3
+publish/NewbieEltonLibsTestMod/data/Newbie Elton Libraries Test Mod/audio/smoke.wav
 ```
 
 GameLibs 4.0.67, ModdingAPI 3.0.1, CheatConsole 1.1.0, and Framework.Levels

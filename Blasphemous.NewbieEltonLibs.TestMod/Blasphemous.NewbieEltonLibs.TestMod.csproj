@@ -39,11 +39,11 @@
     <RemoveDir Directories="$(PackageRoot)" />
     <MakeDir Directories="$(PackageRoot)\plugins" />
     <MakeDir Directories="$(PackageRoot)\localization" />
-    <MakeDir Directories="$(PackageRoot)\data\audio" />
+    <MakeDir Directories="$(PackageRoot)\data\$(Title)\audio" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PackageRoot)\plugins" />
     <Copy SourceFiles="$(ProductionLibraryPath)" DestinationFolder="$(PackageRoot)\plugins" />
     <Copy SourceFiles="@(LocalizationFiles)" DestinationFolder="$(PackageRoot)\localization" />
-    <Copy SourceFiles="@(AudioSmokeFiles)" DestinationFolder="$(PackageRoot)\data\audio" />
+    <Copy SourceFiles="@(AudioSmokeFiles)" DestinationFolder="$(PackageRoot)\data\$(Title)\audio" />
   </Target>
 
 </Project>
