@@ -15,7 +15,7 @@ namespace Blasphemous.NewbieEltonLibs.Components;
 /// </summary>
 public sealed class UIObjectPoolManager : MonoBehaviour
 {
-    private readonly Dictionary<BlasMod, Dictionary<GameObject, Queue<ObjectInstance>>> _poolDictionary =
+    private readonly Dictionary<BlasMod, Dictionary<GameObject, ObjectPool>> _poolDictionary =
         new(new ReferenceComparer<BlasMod>());
 
     /// <summary>
@@ -122,7 +122,7 @@ public sealed class UIObjectPoolManager : MonoBehaviour
     {
         if (prefab == null)
         {
-            ModLog.Error("Cannot reuse a UI pool object because the prefab is null.");
+            ModLog.Error("Cannot reuse a UI pool object because the prefab is null.", owner);
             return null;
         }
 
@@ -132,23 +132,23 @@ public sealed class UIObjectPoolManager : MonoBehaviour
             return null;
         }
 
-        if (!_poolDictionary.TryGetValue(owner, out Dictionary<GameObject, Queue<ObjectInstance>>? prefabPools))
+        if (!_poolDictionary.TryGetValue(owner, out Dictionary<GameObject, ObjectPool>? prefabPools))
         {
             if (!createPoolIfNeeded)
                 return null;
 
-            prefabPools = new Dictionary<GameObject, Queue<ObjectInstance>>(new ReferenceComparer<GameObject>());
+            prefabPools = new Dictionary<GameObject, ObjectPool>(new ReferenceComparer<GameObject>());
             _poolDictionary.Add(owner, prefabPools);
         }
 
-        if (!prefabPools.TryGetValue(prefab, out Queue<ObjectInstance>? pool))
+        if (!prefabPools.TryGetValue(prefab, out ObjectPool? pool))
         {
             if (!createPoolIfNeeded)
                 return null;
 
             if (poolSize <= 0)
             {
-                ModLog.Error($"Cannot create a UI object pool with a non-positive pool size ({poolSize}).");
+                ModLog.Error($"Cannot create a UI object pool with a non-positive pool size ({poolSize}).", owner);
                 return null;
             }
 
@@ -156,31 +156,66 @@ public sealed class UIObjectPoolManager : MonoBehaviour
             prefabPools.Add(prefab, pool);
         }
 
-        if (pool.Count == 0)
+        if (pool.Instances.Count == 0)
             return null;
 
-        ObjectInstance instance = pool.Dequeue();
-        pool.Enqueue(instance);
+        ObjectInstance instance = pool.Instances.Dequeue();
+        if (instance.GameObject == null)
+        {
+            try
+            {
+                instance = CreatePooledReplacement(prefab, pool.Root);
+            }
+            catch
+            {
+                pool.Instances.Enqueue(instance);
+                throw;
+            }
+        }
+
+        pool.Instances.Enqueue(instance);
         instance.Reuse(position, rotation);
         return instance;
     }
 
-    private Queue<ObjectInstance> CreatePool(GameObject prefab, BlasMod owner, int poolSize)
+    private ObjectPool CreatePool(GameObject prefab, BlasMod owner, int poolSize)
     {
-        Queue<ObjectInstance> pool = new(poolSize);
+        Queue<ObjectInstance> instances = new(poolSize);
         GameObject poolRoot = new(prefab.name + " pool (" + owner.GetType().Name + ")");
         poolRoot.SetActive(false);
         poolRoot.transform.SetParent(transform);
 
         for (int i = 0; i < poolSize; i++)
         {
-            GameObject pooledGameObject = UnityEngine.Object.Instantiate<GameObject>(prefab, poolRoot.transform);
-            ObjectInstance instance = new(pooledGameObject);
-            pool.Enqueue(instance);
+            instances.Enqueue(CreatePooledInstance(prefab, poolRoot.transform));
         }
 
         poolRoot.SetActive(true);
-        return pool;
+        return new ObjectPool(poolRoot.transform, instances);
+    }
+
+    private static ObjectInstance CreatePooledInstance(GameObject prefab, Transform parent)
+    {
+        GameObject pooledGameObject = UnityEngine.Object.Instantiate<GameObject>(prefab, parent);
+        pooledGameObject.SetActive(false);
+        return new ObjectInstance(pooledGameObject);
+    }
+
+    private static ObjectInstance CreatePooledReplacement(GameObject prefab, Transform parent)
+    {
+        GameObject stagingRoot = new(prefab.name + " replacement staging");
+        stagingRoot.SetActive(false);
+        stagingRoot.transform.SetParent(parent, false);
+        try
+        {
+            ObjectInstance replacement = CreatePooledInstance(prefab, stagingRoot.transform);
+            replacement.GameObject.transform.SetParent(parent, false);
+            return replacement;
+        }
+        finally
+        {
+            UnityEngine.Object.Destroy(stagingRoot);
+        }
     }
 
     /// <summary>
@@ -203,7 +238,6 @@ public sealed class UIObjectPoolManager : MonoBehaviour
 
             GameObject = gameObject;
             _transform = gameObject.transform;
-            gameObject.SetActive(false);
             _poolObjectScripts = gameObject.GetComponent<PoolObject>() == null
                 ? new PoolObject[0]
                 : gameObject.GetComponents<PoolObject>();
@@ -240,6 +274,19 @@ public sealed class UIObjectPoolManager : MonoBehaviour
         {
             _transform.SetParent(parent);
         }
+    }
+
+    private sealed class ObjectPool
+    {
+        internal ObjectPool(Transform root, Queue<ObjectInstance> instances)
+        {
+            Root = root;
+            Instances = instances;
+        }
+
+        internal Transform Root { get; }
+
+        internal Queue<ObjectInstance> Instances { get; }
     }
 
     private sealed class ReferenceComparer<T> : IEqualityComparer<T> where T : class

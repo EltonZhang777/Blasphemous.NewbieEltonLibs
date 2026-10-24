@@ -213,7 +213,7 @@ public static class ModFlagsManager
         mod = null;
         if (modType != null && (!typeof(BlasMod).IsAssignableFrom(modType) || modType.IsAbstract))
         {
-            ModLog.Error($"Cannot resolve mod identity from invalid mod type '{modType}'.");
+            LogResolutionError($"Cannot resolve mod identity from invalid mod type '{modType}'.", explicitOwner);
             return false;
         }
 
@@ -224,13 +224,13 @@ public static class ModFlagsManager
         }
         catch (Exception exception)
         {
-            ModLog.Error($"Failed to resolve mod identity: {exception.Message}");
+            LogResolutionError($"Failed to resolve mod identity: {exception.Message}", explicitOwner);
             return false;
         }
 
         if (loadedMods == null)
         {
-            ModLog.Error("Cannot resolve mod identity because no loaded mod list is available.");
+            LogResolutionError("Cannot resolve mod identity because no loaded mod list is available.", explicitOwner);
             return false;
         }
 
@@ -258,7 +258,7 @@ public static class ModFlagsManager
         }
         catch (Exception exception)
         {
-            ModLog.Error($"Failed to resolve mod identity for '{modType}': {exception.Message}");
+            LogResolutionError($"Failed to resolve mod identity for '{modType}': {exception.Message}", explicitOwner);
             return false;
         }
 
@@ -267,11 +267,19 @@ public static class ModFlagsManager
             string identity = explicitOwner != null
                 ? $"explicit mod instance '{explicitOwner.GetType()}'"
                 : modType == null ? $"calling assembly '{callingAssembly.FullName}'" : $"mod type '{modType}'";
-            ModLog.Error($"Cannot resolve mod identity for {identity}: expected one loaded mod, found {matchCount}.");
+            LogResolutionError($"Cannot resolve mod identity for {identity}: expected one loaded mod, found {matchCount}.", explicitOwner);
             return false;
         }
 
         mod = match;
         return true;
+    }
+
+    private static void LogResolutionError(string message, BlasMod? explicitOwner)
+    {
+        if (explicitOwner == null)
+            ModLog.Error(message);
+        else
+            ModLog.Error(message, explicitOwner);
     }
 }

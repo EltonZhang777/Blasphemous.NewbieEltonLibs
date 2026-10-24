@@ -24,6 +24,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="NewbieEltonLibsTestModB" />
     <ProjectReference Include="..\Blasphemous.NewbieEltonLibs\Blasphemous.NewbieEltonLibs.csproj">
       <AdditionalProperties>Configuration=Release</AdditionalProperties>
     </ProjectReference>

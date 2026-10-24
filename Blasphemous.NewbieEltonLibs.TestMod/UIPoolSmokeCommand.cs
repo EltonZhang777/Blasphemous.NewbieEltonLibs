@@ -1,12 +1,9 @@
 using Blasphemous.CheatConsole;
 using Blasphemous.Framework.UI;
-using Blasphemous.ModdingAPI;
-using Blasphemous.ModdingAPI.Helpers;
 using Blasphemous.NewbieEltonLibs.CheatConsole;
 using Blasphemous.NewbieEltonLibs.Components;
 using Framework.Pooling;
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Blasphemous.NewbieEltonLibs.TestMod;
@@ -14,7 +11,6 @@ namespace Blasphemous.NewbieEltonLibs.TestMod;
 internal sealed class UIPoolSmokeCommand : AutoModCommand
 {
     private readonly NewbieEltonLibsTestMod _mod;
-    private GameObject? _sharedPrefab;
     private GameObject? _sameNamePrefab;
     private GameObject? _capacityPrefab;
     private GameObject? _missingPrefab;
@@ -45,7 +41,7 @@ internal sealed class UIPoolSmokeCommand : AutoModCommand
             if (pixelPerfect == null || highRes == null)
                 return;
 
-            GameObject sharedPrefab = GetSharedPrefab();
+            GameObject sharedPrefab = UIPoolSharedPrefab.GetPrefab();
             GameObject sameNamePrefab = GetSameNamePrefab();
             GameObject missingPrefab = GetMissingPrefab();
             Vector3 firstPosition = new(13f, 27f, 0f);
@@ -53,11 +49,37 @@ internal sealed class UIPoolSmokeCommand : AutoModCommand
             Vector3 secondPosition = new(-8f, 19f, 0f);
             Quaternion secondRotation = Quaternion.Euler(0f, 0f, 75f);
 
+            bool wrapperPreservesActivation = VerifyWrapperPreservesActivation();
+            Report("wrapper-preserves-active", wrapperPreservesActivation,
+                $"activeAfterWrapping={wrapperPreservesActivation}");
+            if (UIPoolSharedPrefab.ConsumerADestructionScheduled)
+            {
+                bool recovered = UIPoolSharedPrefab.TryRecoverConsumerA(pixelPerfect, firstPosition, firstRotation);
+                bool? recoveryPassed = UIPoolSharedPrefab.ConsumerARecoveryPassed
+                    ? true
+                    : UIPoolSharedPrefab.ConsumerAInstanceDestroyed ? recovered : null;
+                Report("destroyed-instance-replaced", recoveryPassed,
+                    $"recovered={UIPoolSharedPrefab.ConsumerARecoveryPassed},destroyed={UIPoolSharedPrefab.ConsumerAInstanceDestroyed}");
+                if (UIPoolSharedPrefab.ConsumerARecoveryPassed)
+                    UIPoolSharedPrefab.ResetConsumerARecovery();
+            }
+
             UIObjectPoolManager.ObjectInstance? missing = pixelPerfect.ReuseObject(
                 missingPrefab,
                 Vector3.zero,
                 Quaternion.identity);
             Report("missing-pool", missing == null, $"returnedNull={missing == null}");
+
+            GameObject? previousConsumerAInstance = UIPoolSharedPrefab.ConsumerAInstance;
+            UIPoolCallbackProbe? previousCallback = previousConsumerAInstance != null
+                ? previousConsumerAInstance.GetComponent<UIPoolCallbackProbe>()
+                : null;
+            int reuseCountBefore = previousCallback == null ? 0 : previousCallback.ReuseCount;
+            int enableCountBefore = previousCallback == null ? 0 : previousCallback.EnableCount;
+            bool previousInstanceActive = previousConsumerAInstance != null
+                && previousConsumerAInstance.activeInHierarchy;
+            bool firstPoolUse = previousConsumerAInstance == null;
+            UIPoolCallbackProbe.ExpectReusePosition(firstPosition);
 
             UIObjectPoolManager.ObjectInstance? inferred = pixelPerfect.ReuseObject(
                 sharedPrefab,
@@ -65,8 +87,25 @@ internal sealed class UIPoolSmokeCommand : AutoModCommand
                 firstRotation,
                 createPoolIfNeeded: true,
                 poolSize: 1);
+            UIPoolCallbackProbe? callback = inferred != null
+                ? inferred.GameObject.GetComponent<UIPoolCallbackProbe>()
+                : null;
+            int enableCountAfterFirst = callback == null ? 0 : callback.EnableCount;
+            int unexpectedEnableCount = callback == null ? 0 : callback.EnableAtUnexpectedPositionCount;
+            Report("inactive-before-first-reuse", firstPoolUse
+                    ? callback != null && enableCountAfterFirst == 1 && unexpectedEnableCount == 0
+                    : null,
+                $"firstPoolUse={firstPoolUse},enableCount={enableCountAfterFirst},unexpectedPositionEnables={unexpectedEnableCount}");
             if (inferred != null)
                 inferred.GameObject.SetActive(false);
+
+            UIObjectPoolManager.ObjectInstance? repeatedInferred = pixelPerfect.ReuseObject(
+                sharedPrefab,
+                secondPosition,
+                secondRotation,
+                createPoolIfNeeded: false,
+                poolSize: 1);
+            int enableCountAfterSecond = callback == null ? 0 : callback.EnableCount;
 
             UIObjectPoolManager.ObjectInstance? explicitOwner = pixelPerfect.ReuseObject(
                 sharedPrefab,
@@ -75,18 +114,35 @@ internal sealed class UIPoolSmokeCommand : AutoModCommand
                 _mod,
                 createPoolIfNeeded: false,
                 poolSize: 1);
+            int enableCountAfterThird = callback == null ? 0 : callback.EnableCount;
 
-            bool sameOwnerPool = inferred != null && ReferenceEquals(inferred, explicitOwner);
+            bool inferredReuse = inferred != null && ReferenceEquals(inferred, repeatedInferred);
+            bool explicitUsesSamePool = inferred != null && ReferenceEquals(inferred, explicitOwner);
             bool transformUpdated = explicitOwner != null
                 && explicitOwner.GameObject.activeSelf
                 && explicitOwner.GameObject.transform.position == secondPosition
                 && explicitOwner.GameObject.transform.rotation == secondRotation;
-            UIPoolCallbackProbe? callback = explicitOwner?.GameObject.GetComponent<UIPoolCallbackProbe>();
-            bool callbackRan = callback != null && callback.ReuseCount >= 2;
-            Report("owner-overloads", sameOwnerPool,
-                $"sameWrapper={sameOwnerPool},inferred={(inferred != null)},explicit={(explicitOwner != null)}");
-            Report("transform-and-callback", transformUpdated && callbackRan,
-                $"transformUpdated={transformUpdated},callbackCount={(callback == null ? 0 : callback.ReuseCount)}");
+            int reuseCount = callback == null ? 0 : callback.ReuseCount;
+            int enableCount = callback == null ? 0 : callback.EnableCount;
+            int reuseDelta = reuseCount - reuseCountBefore;
+            int enableDelta = enableCount - enableCountBefore;
+            int expectedFirstEnableDelta = previousCallback == null || !previousInstanceActive ? 1 : 0;
+            bool callbackRan = callback != null && reuseDelta == 3;
+            bool activationCountValid = callback != null
+                && enableCountAfterFirst - enableCountBefore == expectedFirstEnableDelta
+                && enableCountAfterSecond - enableCountAfterFirst == 1
+                && enableCountAfterThird - enableCountAfterSecond == 0
+                && inferred != null && inferred.GameObject.activeInHierarchy
+                && repeatedInferred != null && repeatedInferred.GameObject.activeInHierarchy
+                && explicitOwner != null && explicitOwner.GameObject.activeInHierarchy;
+            bool consumerAReuse = inferredReuse && transformUpdated && callbackRan && activationCountValid;
+            Report("owner-overloads", inferredReuse && explicitUsesSamePool,
+                $"repeatedInferred={inferredReuse},explicitSamePool={explicitUsesSamePool},inferred={(inferred != null)},explicit={(explicitOwner != null)}");
+            Report("transform-and-callback", transformUpdated && callbackRan && activationCountValid,
+                $"transformUpdated={transformUpdated},reuseDelta={reuseDelta},enableDelta={enableDelta},reuseCount={reuseCount},enableCount={enableCount},activationCountValid={activationCountValid}");
+            Report("consumer-a-reuse", consumerAReuse,
+                $"repeatedInferred={inferredReuse},transformUpdated={transformUpdated},reuseDelta={reuseDelta},enableDelta={enableDelta},reuseCount={reuseCount},enableCount={enableCount},activationCountValid={activationCountValid}");
+            UIPoolSharedPrefab.RecordConsumerA(_mod, sharedPrefab, explicitOwner, consumerAReuse);
 
             UIObjectPoolManager.ObjectInstance? sameNameFirst = pixelPerfect.ReuseObject(
                 sameNamePrefab,
@@ -150,42 +206,17 @@ internal sealed class UIPoolSmokeCommand : AutoModCommand
             Report("pool-capacity", capacityHonored,
                 $"firstAndSecondDistinct={capacityFirst != null && capacitySecond != null && !ReferenceEquals(capacityFirst, capacitySecond)},thirdReusesFirst={ReferenceEquals(capacityFirst, capacityThird)}");
 
-            BlasMod? secondOwner = FindSecondLoadedMod();
-            if (secondOwner == null)
-            {
-                Report("owner-isolation", null, "requires another loaded BlasMod; see issue #65 for the two-consumer game check");
-            }
-            else
-            {
-                UIObjectPoolManager.ObjectInstance? secondOwnerInstance = pixelPerfect.ReuseObject(
-                    sharedPrefab,
-                    firstPosition,
-                    firstRotation,
-                    secondOwner,
-                    createPoolIfNeeded: true,
-                    poolSize: 1);
-                bool ownerIsolation = secondOwnerInstance != null
-                    && explicitOwner != null
-                    && !ReferenceEquals(secondOwnerInstance.GameObject, explicitOwner.GameObject);
-                Report("owner-isolation", ownerIsolation,
-                    $"secondOwner={secondOwner.Id},distinctInstance={ownerIsolation}");
-            }
+            bool? ownerIsolation = UIPoolSharedPrefab.CheckCrossConsumerIsolation(out string isolationDetail);
+            Report("owner-isolation", ownerIsolation, isolationDetail);
+
+            bool destructionScheduled = UIPoolSharedPrefab.ScheduleConsumerAInstanceDestruction();
+            Report("destroyed-instance-scheduled", destructionScheduled,
+                $"scheduled={UIPoolSharedPrefab.ConsumerADestructionScheduled}");
         }
         catch (Exception exception)
         {
             Report("exception", false, exception.ToString());
         }
-    }
-
-    private GameObject GetSharedPrefab()
-    {
-        if (_sharedPrefab != null)
-            return _sharedPrefab;
-
-        _sharedPrefab = new GameObject("NewbieEltonLibs.UI.Pool.SharedPrefab");
-        _sharedPrefab.AddComponent<UIPoolCallbackProbe>();
-        _sharedPrefab.SetActive(false);
-        return _sharedPrefab;
     }
 
     private GameObject GetSameNamePrefab()
@@ -198,6 +229,16 @@ internal sealed class UIPoolSmokeCommand : AutoModCommand
         return _sameNamePrefab;
     }
 
+    private static bool VerifyWrapperPreservesActivation()
+    {
+        GameObject callerOwned = new("NewbieEltonLibs.UI.Pool.WrapperActivationProbe");
+        bool activeBefore = callerOwned.activeSelf;
+        _ = new UIObjectPoolManager.ObjectInstance(callerOwned);
+        bool activePreserved = callerOwned.activeSelf == activeBefore;
+        UnityEngine.Object.Destroy(callerOwned);
+        return activePreserved;
+    }
+
     private GameObject GetCapacityPrefab()
     {
         if (_capacityPrefab != null)
@@ -206,21 +247,6 @@ internal sealed class UIPoolSmokeCommand : AutoModCommand
         _capacityPrefab = new GameObject("NewbieEltonLibs.UI.Pool.CapacityPrefab");
         _capacityPrefab.SetActive(false);
         return _capacityPrefab;
-    }
-
-    private BlasMod? FindSecondLoadedMod()
-    {
-        IEnumerable<BlasMod>? loadedMods = ModHelper.LoadedMods;
-        if (loadedMods == null)
-            return null;
-
-        foreach (BlasMod candidate in loadedMods)
-        {
-            if (candidate != null && !ReferenceEquals(candidate, _mod))
-                return candidate;
-        }
-
-        return null;
     }
 
     private GameObject GetMissingPrefab()
@@ -244,7 +270,32 @@ internal sealed class UIPoolSmokeCommand : AutoModCommand
 
 internal sealed class UIPoolCallbackProbe : PoolObject
 {
+    private static bool _hasExpectedReusePosition;
+    private static Vector3 _expectedReusePosition;
+
     internal int ReuseCount { get; private set; }
+
+    internal int EnableCount { get; private set; }
+
+    internal int EnableAtUnexpectedPositionCount { get; private set; }
+
+    internal static void ExpectReusePosition(Vector3 position)
+    {
+        _expectedReusePosition = position;
+        _hasExpectedReusePosition = true;
+    }
+
+    private void OnEnable()
+    {
+        EnableCount++;
+        if (_hasExpectedReusePosition && transform.position != _expectedReusePosition)
+            EnableAtUnexpectedPositionCount++;
+    }
+
+    internal void ResetEnableCount()
+    {
+        EnableCount = 0;
+    }
 
     /// <summary>
     /// Records each reuse callback for the UI pool smoke test.
