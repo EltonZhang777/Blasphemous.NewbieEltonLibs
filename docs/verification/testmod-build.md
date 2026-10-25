@@ -108,6 +108,24 @@ the library, and for failed `S5` checks. Record errors from unrelated profile
 mods separately. Snapshot and startup evidence do not replace the player's
 manual report.
 
+## Recorded real-game results
+
+The completed A→B→A run on 2026-10-25 used session
+`9f98bb01b0e24826b379473153272d70`. Both canvas accessors, wrapper activation,
+missing-pool behavior, first-use inactivity, inferred and explicit owner reuse,
+transform updates, callbacks, prefab and canvas isolation, capacity, destroyed
+instance replacement, and final owner isolation passed. A's first owner-isolation
+check was `BLOCKED` while it waited for B; the final A first-use check was
+`BLOCKED` because that pool had already been initialized. B and the final A run
+reported `PASS` for owner isolation and destroyed-instance replacement. No
+`S5|FAIL` entries were recorded.
+
+The session snapshot (`bepinex.log` and `unity.log`) ended with `All mods
+disposed!`. An earlier launch attempt crashed during
+`FMODAudioManager.Initialize` before any S5 checks; the completed rerun did not
+reproduce that crash. The snapshot also contains a `TypeLoadException` from the
+unrelated `ConsoleControlApiProbe` profile mod.
+
 The A-only dry run prints the selected project, build, target name, package
 files, profile, and destination paths before any profile mutation. In either
 flow, `run` records the process tree and startup evidence; `stop` and `clean`
