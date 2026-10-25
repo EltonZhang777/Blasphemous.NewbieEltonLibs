@@ -22,6 +22,10 @@ internal sealed class NewbieEltonLibsTestMod : BlasMod
     private SpriteRenderer? _trackedRenderer;
     private Sprite[]? _trackedFrames;
     private Sprite? _lastTrackedSprite;
+    private readonly object _workerStateLock = new();
+    private readonly Queue<string> _workerLogs = new();
+    private readonly List<FMOD.Sound> _ownedImportedSounds = new();
+    private bool _gameExited = true;
 
     internal NewbieEltonLibsTestMod(MonoBehaviour coroutineHost)
         : base(ModInfo.ModId, ModInfo.ModName, ModInfo.ModAuthor, ModInfo.ModVersion)
@@ -42,17 +46,20 @@ internal sealed class NewbieEltonLibsTestMod : BlasMod
 
     protected override void OnNewGame()
     {
+        SetGameActive();
         LogFlagLifecycle("NEW_GAME");
     }
 
     protected override void OnLoadGame()
     {
+        SetGameActive();
         LogFlagLifecycle("LOAD_GAME");
     }
 
     protected override void OnExitGame()
     {
         LogFlagLifecycle("EXIT_GAME");
+        ReleaseImportedSounds();
     }
 
     protected override void OnRegisterServices(ModServiceProvider provider)
@@ -62,6 +69,8 @@ internal sealed class NewbieEltonLibsTestMod : BlasMod
 
     protected override void OnUpdate()
     {
+        FlushWorkerLogs();
+
         int axisEdge = InputHandler.GetAxisDown(AxisCode.MoveHorizontal, true);
         if (axisEdge != 0)
         {
@@ -154,6 +163,86 @@ internal sealed class NewbieEltonLibsTestMod : BlasMod
             if (importedClip is not null)
             {
                 UnityEngine.Object.Destroy(importedClip);
+            }
+        }
+    }
+
+    internal void QueueWorkerLog(string message)
+    {
+        lock (_workerStateLock)
+        {
+            _workerLogs.Enqueue(message);
+        }
+    }
+
+    internal void RetainImportedSound(FMOD.Sound sound)
+    {
+        bool releaseImmediately;
+        lock (_workerStateLock)
+        {
+            releaseImmediately = _gameExited;
+            if (!releaseImmediately)
+            {
+                _ownedImportedSounds.Add(sound);
+            }
+        }
+
+        if (releaseImmediately && sound.hasHandle())
+        {
+            FMOD.RESULT result = sound.release();
+            if (result != FMOD.RESULT.OK)
+            {
+                QueueWorkerLog($"S7|late-release|FAIL|result={result}");
+            }
+        }
+    }
+
+    private void SetGameActive()
+    {
+        lock (_workerStateLock)
+        {
+            _gameExited = false;
+        }
+    }
+
+    private void FlushWorkerLogs()
+    {
+        while (true)
+        {
+            string message;
+            lock (_workerStateLock)
+            {
+                if (_workerLogs.Count == 0)
+                {
+                    return;
+                }
+
+                message = _workerLogs.Dequeue();
+            }
+
+            Log(message);
+        }
+    }
+
+    private void ReleaseImportedSounds()
+    {
+        FMOD.Sound[] sounds;
+        lock (_workerStateLock)
+        {
+            _gameExited = true;
+            sounds = _ownedImportedSounds.ToArray();
+            _ownedImportedSounds.Clear();
+        }
+
+        foreach (FMOD.Sound sound in sounds)
+        {
+            if (sound.hasHandle())
+            {
+                FMOD.RESULT result = sound.release();
+                if (result != FMOD.RESULT.OK)
+                {
+                    Log($"S7|release|FAIL|result={result}");
+                }
             }
         }
     }
