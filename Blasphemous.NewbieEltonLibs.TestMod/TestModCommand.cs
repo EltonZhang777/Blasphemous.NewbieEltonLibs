@@ -2,11 +2,13 @@ using Blasphemous.CheatConsole;
 using Blasphemous.ModdingAPI;
 using Blasphemous.ModdingAPI.Files;
 using Blasphemous.ModdingAPI.Input;
+using Blasphemous.NewbieEltonLibs.Audio;
 using Blasphemous.NewbieEltonLibs.CheatConsole;
 using Blasphemous.NewbieEltonLibs.Components;
 using Blasphemous.NewbieEltonLibs.Extensions.GameLibs;
 using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
 using Blasphemous.NewbieEltonLibs.Storage;
+using FMODUnity;
 using Framework.FrameworkCore;
 using Framework.Inventory;
 using Framework.Managers;
@@ -20,6 +22,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using UnityEngine;
 
 namespace Blasphemous.NewbieEltonLibs.TestMod;
@@ -559,6 +562,126 @@ internal sealed class TestModCommand : AutoModCommand
         catch (Exception exception)
         {
             ReportS4("api-exception", false, exception.ToString());
+        }
+    }
+
+    [ModSubCommand("s7-sound-import", "verify asynchronous FMOD sound imports", validLengths: [0])]
+    private void RunSoundImports(string[] parameters)
+    {
+        new SoundImportVerification(_mod, Thread.CurrentThread.ManagedThreadId).Start();
+        Write("S7 import requests started; inspect output_log.txt for S7| lines.");
+    }
+
+    private sealed class SoundImportVerification
+    {
+        private const int RequestCount = 4;
+        private const int CallbackTimeoutMilliseconds = 10000;
+
+        private readonly NewbieEltonLibsTestMod _mod;
+        private readonly int _mainThreadId;
+        private readonly int[] _callbackCounts = new int[RequestCount];
+        private readonly int[] _completedRequests = new int[RequestCount];
+        private readonly bool[] _passed = new bool[RequestCount];
+        private readonly object _sync = new();
+        private int _summaryReported;
+        private Timer? _summaryTimer;
+
+        internal SoundImportVerification(NewbieEltonLibsTestMod mod, int mainThreadId)
+        {
+            _mod = mod;
+            _mainThreadId = mainThreadId;
+        }
+
+        internal void Start()
+        {
+            _summaryTimer = new Timer(_ => ReportSummary("observation-complete"), null,
+                CallbackTimeoutMilliseconds, Timeout.Infinite);
+
+            StartImport(0, "mp3", "audio/test_meme.mp3", true);
+            StartImport(1, "pcm-wav", "audio/smoke.wav", true);
+            StartImport(2, "missing", "audio/__s6_missing__.mp3", false);
+            StartImport(3, "outside", Path.Combine("..", "__s6_outside__.mp3"), false);
+        }
+
+        private void StartImport(int index, string name, string fileName, bool expectedSuccess)
+        {
+            try
+            {
+                FMODSoundImporter.ImportAsync(RuntimeManager.LowlevelSystem, _mod.FileHandler, fileName,
+                    result => RecordResult(index, name, expectedSuccess, result));
+            }
+            catch (Exception exception)
+            {
+                _mod.QueueWorkerLog($"S7|{name}|FAIL|request could not be queued: {exception.Message}");
+                CompleteRequest(index);
+            }
+        }
+
+        private void RecordResult(int index, string name, bool expectedSuccess, FMODSoundImportResult result)
+        {
+            int callbackCount = Interlocked.Increment(ref _callbackCounts[index]);
+            int callbackThreadId = Thread.CurrentThread.ManagedThreadId;
+            bool soundValid = result.Succeeded ? result.Sound.hasHandle() : !string.IsNullOrEmpty(result.ErrorMessage);
+            bool passed = callbackCount == 1 && result.Succeeded == expectedSuccess && soundValid && callbackThreadId != _mainThreadId;
+            bool lateDuplicate;
+            lock (_sync)
+            {
+                _passed[index] = passed;
+                lateDuplicate = callbackCount > 1 && _summaryReported == 1;
+            }
+
+            if (result.Succeeded)
+            {
+                _mod.RetainImportedSound(result.Sound);
+            }
+
+            string outcome = result.Succeeded ? "success" : "failure";
+            _mod.QueueWorkerLog($"S7|{name}|{(passed ? "PASS" : "FAIL")}|outcome={outcome};soundHandle={result.Sound.hasHandle()};errorProvided={!string.IsNullOrEmpty(result.ErrorMessage)};callbackCount={callbackCount};callbackThread={callbackThreadId};mainThread={_mainThreadId};error={result.ErrorMessage}");
+            if (lateDuplicate)
+            {
+                _mod.QueueWorkerLog($"S7|summary|FAIL|late duplicate callback for {name};callbackCount={callbackCount}");
+            }
+            CompleteRequest(index);
+        }
+
+        private void CompleteRequest(int index)
+        {
+            Interlocked.Exchange(ref _completedRequests[index], 1);
+        }
+
+        private void ReportSummary(string reason)
+        {
+            lock (_sync)
+            {
+                if (_summaryReported != 0)
+                {
+                    return;
+                }
+                _summaryReported = 1;
+
+                bool cardinalityPassed = true;
+                bool outcomesPassed = true;
+                string counts = "";
+                string missing = "";
+                string[] names = ["mp3", "pcm-wav", "missing", "outside"];
+                for (int i = 0; i < RequestCount; i++)
+                {
+                    int count = Interlocked.CompareExchange(ref _callbackCounts[i], 0, 0);
+                    bool completed = Interlocked.CompareExchange(ref _completedRequests[i], 0, 0) == 1;
+                    cardinalityPassed &= count == 1 && completed;
+                    outcomesPassed &= _passed[i];
+                    counts += $"{(i == 0 ? "" : ",")}{names[i]}={count}";
+                    if (!completed)
+                    {
+                        missing += $"{(missing.Length == 0 ? "" : ",")}{names[i]}";
+                    }
+                }
+
+                bool passed = cardinalityPassed && outcomesPassed;
+                _mod.QueueWorkerLog($"S7|summary|{(passed ? "PASS" : "FAIL")}|reason={reason};callbackCardinality={(cardinalityPassed ? "PASS" : "FAIL")};outcomesAndThreads={(outcomesPassed ? "PASS" : "FAIL")};counts={counts};missing={missing};observationWindowMs={CallbackTimeoutMilliseconds}");
+                _summaryTimer?.Dispose();
+                _summaryTimer = null;
+            }
         }
     }
 
