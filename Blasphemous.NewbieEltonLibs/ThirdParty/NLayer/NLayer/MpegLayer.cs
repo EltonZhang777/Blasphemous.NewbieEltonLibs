@@ -1,0 +1,9 @@
+namespace NLayer;
+
+public enum MpegLayer
+{
+	Unknown,
+	LayerI,
+	LayerII,
+	LayerIII
+}

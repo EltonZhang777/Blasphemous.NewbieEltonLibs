@@ -22,11 +22,22 @@
 	  <PackageReference Include="Blasphemous.CheatConsole" Version="1.1.0" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<Compile Remove="ThirdParty\NLayer\**\*.cs" />
+		<ProjectReference Include="ThirdParty\NLayer\NLayer.csproj">
+			<PrivateAssets>all</PrivateAssets>
+			<Private>true</Private>
+		</ProjectReference>
+		<None Include="$(MSBuildProjectDirectory)\ThirdParty\NLayer\bin\$(Configuration)\net35\NLayer.dll" Pack="true" PackagePath="lib/net35/" Visible="false" />
+		<None Include="$(MSBuildProjectDirectory)\..\THIRD-PARTY-NOTICES.txt" Pack="true" PackagePath="" Visible="false" />
+	</ItemGroup>
+
   <Target Name="Development" AfterTargets="Build">
     <PropertyGroup>
       <PublishFolder>$(MSBuildProjectDirectory)\..\publish\</PublishFolder>
     </PropertyGroup>
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PublishFolder)" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\ThirdParty\NLayer\bin\$(Configuration)\net35\NLayer.dll" DestinationFolder="$(PublishFolder)" />
   </Target>
 
 </Project>

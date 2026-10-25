@@ -25,18 +25,18 @@ The library targets .NET Framework 3.5. All four packages below are hard compile
 
 - **CheatConsole commands and logging** — `CheatConsoleLogging` and `LogLevel` provide opt-in console input/output logging; `AutoModCommand` and `ModSubCommandAttribute` provide attribute-based mod command registration.
 - **Mod-owned flags** — `ModFlagsManager` provides owner-scoped boolean flags backed by the vanilla event system.
-- **Runtime resource storage** — `SpriteStorage`, `AnimationStorage`, `SpriteImportInfo`, `AnimationInfo`, and `AnimationImportInfo` organize per-mod sprite and animation resources plus import metadata.
+- **Runtime resource storage** — `SpriteStorage`, `AnimationStorage`, `AudioClipStorage`, `FMODSoundStorage`, `SpriteImportInfo`, `AnimationInfo`, and `AnimationImportInfo` organize per-mod sprite, animation, and audio resources plus import metadata.
 - **Components** — `ModAnimator` displays stored animation data, and `ItemCollection<T>` collects matching public fields as items.
 - **Serialization** — `SerializableVector3`, `UnityEngineIgnoreConverter`, and `JsonSerializerSettingsFactory` provide Unity-value and JSON serialization helpers.
 - **ModdingAPI extensions** — `ConfigHandlerExtensions`, `FileHandlerExtensions`, `InputHandlerExtensions`, `LocalizationHandlerExtensions`, `ModCommandExtensions`, and `ModLogExtensions` cover configuration, files/JSON, input, localization, commands, and logging.
 - **GameLibs extensions** — `InventoryManagerExtensions`, `I2Extensions`, `UnityExtensions`, `EnemyHealthBarExtensions`, `NewInventoryWidgetExtensions`, `EntityOrientationExtensions`, and `TraverseUtils` cover inventory, translation, Unity, enemy/boss/UI, traversal, and orientation helpers.
 - **System and validation** — `ValidationUtils` and `SystemExtensions` provide general validation and .NET utility helpers.
 
-The storage APIs are per-mod registries for caller-owned resources; they do not introduce a process-wide registry or an automatic importer. Mod-owned flags use the vanilla event system rather than a second persistence store.
+The storage APIs are per-mod registries for caller-owned resources; they do not introduce a process-wide registry. `AudioClipStorage` imports files only when the consuming mod explicitly requests it. Mod-owned flags use the vanilla event system rather than a second persistence store.
 
 ## Verification and known limitations
 
-- The accepted non-AssetBundle S1–S4 public API scope has automated, external-consumer, and tracked real-game coverage. 
+- The accepted non-AssetBundle S1–S4 public API scope has automated, external-consumer, and tracked real-game coverage. S5–S6 audio-storage checks and remaining in-game steps are listed in [`docs/verification/public-api-coverage.md`](docs/verification/public-api-coverage.md).
 - The AssetBundle success path remains explicitly deferred to [issue #60](https://github.com/EltonZhang777/Blasphemous.NewbieEltonLibs/issues/60)
 - `ModAnimator` retains its known last-frame skip behavior.
 

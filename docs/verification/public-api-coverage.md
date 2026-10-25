@@ -1,6 +1,6 @@
 # Public API coverage status
 
-This record maps the public API coverage work to its verification boundary. S1–S4
+This record maps the public API coverage work to its verification boundary. S1–S6
 are verification slices, not production modules.
 
 ## Automated coverage
@@ -14,6 +14,8 @@ are verification slices, not production modules.
 | S4 / #40 | Serializable vectors, Unity converter, JSON presets, and System extensions | `SerializationCoverageTests`, `SystemExtensionsCoverageTests` |
 | S4 / #41–#42 | Deterministic orientation failure, translation parsing, inventory prefixes, traversal validation, and game-bound signatures | `GameLibsCoverageTests` |
 | S4 / #43–#44 | File/config JSON round trips, keybinding lookup, command validation, and ModdingAPI signatures | `ModdingApiCoverageTests` |
+| S5 / #66–#68 | Per-mod AudioClip storage, Data path confinement, and asynchronous MP3/PCM WAV callbacks | `AudioClipStorageTests`; TestMod `s5-audio` game smoke |
+| S6 / #75 | Per-mod FMOD Sound storage, strict/Try registration, explicit replacement, and non-owning lifetime | `FMODSoundStorageTests`; TestMod `s6-sound-storage` consumer smoke |
 
 The automated suite is an external-consumer net8 test project referencing the
 net35 library. Internal registries and private state are used only to arrange
@@ -52,6 +54,17 @@ than being reported as passed:
    transitions, localization target/default/error behavior, and console-widget
    access/parameter validation wording. Keep the consuming smoke assembly as the
    signature/compile check for every public overload.
+6. In a real Unity/BepInEx session, run `newbie-test s5-audio`. Verify the MP3
+   and PCM WAV cases each log exactly one success callback and a stored entry;
+   verify traversal and unsupported-format cases each log exactly one failure
+   callback and no entry. The smoke check must not play or destroy the clips.
+   Building TestMod proves compilation and packaging only; record real game logs
+   before treating this check as passed.
+7. In a real Unity/BepInEx session, run `newbie-test s6-sound-storage`. Verify
+   `S6|sound-storage|PASS` reports registration, lookup, duplicate rejection,
+   and per-instance isolation. The check uses placeholder handles and does not
+   create or release an FMOD Sound; building TestMod proves compilation and
+   packaging only. Record real game logs before treating this check as passed.
 
 The real-game results should be appended here by the manual verifier; no broad
 Unity simulator, upstream modification, or duplicated vanilla persistence is
