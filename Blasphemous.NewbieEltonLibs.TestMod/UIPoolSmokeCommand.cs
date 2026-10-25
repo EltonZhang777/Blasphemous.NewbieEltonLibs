@@ -71,9 +71,7 @@ internal sealed class UIPoolSmokeCommand : AutoModCommand
             Report("missing-pool", missing == null, $"returnedNull={missing == null}");
 
             GameObject? previousConsumerAInstance = UIPoolSharedPrefab.ConsumerAInstance;
-            UIPoolCallbackProbe? previousCallback = previousConsumerAInstance != null
-                ? previousConsumerAInstance.GetComponent<UIPoolCallbackProbe>()
-                : null;
+            UIPoolCallbackProbe? previousCallback = previousConsumerAInstance?.GetComponent<UIPoolCallbackProbe>();
             int reuseCountBefore = previousCallback == null ? 0 : previousCallback.ReuseCount;
             int enableCountBefore = previousCallback == null ? 0 : previousCallback.EnableCount;
             bool previousInstanceActive = previousConsumerAInstance != null
@@ -87,17 +85,14 @@ internal sealed class UIPoolSmokeCommand : AutoModCommand
                 firstRotation,
                 createPoolIfNeeded: true,
                 poolSize: 1);
-            UIPoolCallbackProbe? callback = inferred != null
-                ? inferred.GameObject.GetComponent<UIPoolCallbackProbe>()
-                : null;
+            UIPoolCallbackProbe? callback = inferred?.GameObject.GetComponent<UIPoolCallbackProbe>();
             int enableCountAfterFirst = callback == null ? 0 : callback.EnableCount;
             int unexpectedEnableCount = callback == null ? 0 : callback.EnableAtUnexpectedPositionCount;
             Report("inactive-before-first-reuse", firstPoolUse
                     ? callback != null && enableCountAfterFirst == 1 && unexpectedEnableCount == 0
                     : null,
                 $"firstPoolUse={firstPoolUse},enableCount={enableCountAfterFirst},unexpectedPositionEnables={unexpectedEnableCount}");
-            if (inferred != null)
-                inferred.GameObject.SetActive(false);
+            inferred?.GameObject.SetActive(false);
 
             UIObjectPoolManager.ObjectInstance? repeatedInferred = pixelPerfect.ReuseObject(
                 sharedPrefab,
@@ -149,8 +144,7 @@ internal sealed class UIPoolSmokeCommand : AutoModCommand
                 firstPosition,
                 firstRotation,
                 createPoolIfNeeded: true);
-            if (sameNameFirst != null)
-                sameNameFirst.GameObject.SetActive(false);
+            sameNameFirst?.GameObject.SetActive(false);
             UIObjectPoolManager.ObjectInstance? sameNameSecond = pixelPerfect.ReuseObject(
                 sameNamePrefab,
                 secondPosition,
@@ -184,8 +178,7 @@ internal sealed class UIPoolSmokeCommand : AutoModCommand
                 firstRotation,
                 createPoolIfNeeded: true,
                 poolSize: 2);
-            if (capacityFirst != null)
-                capacityFirst.GameObject.SetActive(false);
+            capacityFirst?.GameObject.SetActive(false);
             UIObjectPoolManager.ObjectInstance? capacitySecond = pixelPerfect.ReuseObject(
                 capacityPrefab,
                 secondPosition,

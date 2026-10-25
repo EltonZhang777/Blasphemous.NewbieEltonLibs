@@ -233,13 +233,10 @@ public sealed class UIObjectPoolManager : MonoBehaviour
         /// <exception cref="ArgumentNullException"><paramref name="gameObject"/> is <see langword="null"/>.</exception>
         public ObjectInstance(GameObject gameObject)
         {
-            if (gameObject == null)
-                throw new ArgumentNullException(nameof(gameObject));
-
-            GameObject = gameObject;
+            GameObject = gameObject ?? throw new ArgumentNullException(nameof(gameObject));
             _transform = gameObject.transform;
             _poolObjectScripts = gameObject.GetComponent<PoolObject>() == null
-                ? new PoolObject[0]
+                ? []
                 : gameObject.GetComponents<PoolObject>();
         }
 

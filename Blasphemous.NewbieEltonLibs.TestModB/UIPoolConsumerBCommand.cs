@@ -46,9 +46,7 @@ internal sealed class UIPoolConsumerBCommand : AutoModCommand
             Quaternion secondRotation = Quaternion.Euler(0f, 0f, 100f);
 
             GameObject? previousConsumerBInstance = UIPoolSharedPrefab.ConsumerBInstance;
-            UIPoolCallbackProbe? previousCallback = previousConsumerBInstance != null
-                ? previousConsumerBInstance.GetComponent<UIPoolCallbackProbe>()
-                : null;
+            UIPoolCallbackProbe? previousCallback = previousConsumerBInstance?.GetComponent<UIPoolCallbackProbe>();
             int reuseCountBefore = previousCallback == null ? 0 : previousCallback.ReuseCount;
             int enableCountBefore = previousCallback == null ? 0 : previousCallback.EnableCount;
             bool previousInstanceActive = previousConsumerBInstance != null
@@ -62,17 +60,14 @@ internal sealed class UIPoolConsumerBCommand : AutoModCommand
                 firstRotation,
                 createPoolIfNeeded: true,
                 poolSize: 1);
-            UIPoolCallbackProbe? callback = first != null
-                ? first.GameObject.GetComponent<UIPoolCallbackProbe>()
-                : null;
+            UIPoolCallbackProbe? callback = first?.GameObject.GetComponent<UIPoolCallbackProbe>();
             int enableCountAfterFirst = callback == null ? 0 : callback.EnableCount;
             int unexpectedEnableCount = callback == null ? 0 : callback.EnableAtUnexpectedPositionCount;
             Report("inactive-before-first-reuse", firstPoolUse
                     ? callback != null && enableCountAfterFirst == 1 && unexpectedEnableCount == 0
                     : null,
                 $"firstPoolUse={firstPoolUse},enableCount={enableCountAfterFirst},unexpectedPositionEnables={unexpectedEnableCount}");
-            if (first != null)
-                first.GameObject.SetActive(false);
+            first?.GameObject.SetActive(false);
 
             UIObjectPoolManager.ObjectInstance? repeated = pixelPerfect.ReuseObject(
                 sharedPrefab,
