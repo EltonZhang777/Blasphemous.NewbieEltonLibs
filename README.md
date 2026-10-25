@@ -12,7 +12,7 @@ Reference the NuGet package (published to nuget.org) in your mod project:
 <PackageReference Include="Blasphemous.NewbieEltonLibs" Version="0.3.0" />
 ```
 
-The library targets .NET Framework 3.5. All four packages below are hard compile-time references. At runtime, the selected game profile supplies the framework and game assemblies. `Blasphemous.ModdingAPI` and `Blasphemous.GameLibs` are baseline dependencies, while `Blasphemous.CheatConsole` and `Blasphemous.Framework.Levels` are feature-gated runtime soft dependencies required when the consuming mod executes APIs that reference those packages.
+The library targets .NET Framework 3.5. All five packages below are hard compile-time references. At runtime, the selected game profile supplies the framework and game assemblies. `Blasphemous.ModdingAPI` and `Blasphemous.GameLibs` are baseline dependencies, while `Blasphemous.CheatConsole`, `Blasphemous.Framework.Levels`, and `Blasphemous.Framework.UI` are feature-gated runtime soft dependencies required when the consuming mod executes APIs that reference those packages.
 
 | Package | Tested version | Runtime role |
 | --- | --- | --- |
@@ -20,13 +20,14 @@ The library targets .NET Framework 3.5. All four packages below are hard compile
 | `Blasphemous.GameLibs` | `4.0.67` | Baseline game-side dependency |
 | `Blasphemous.CheatConsole` | `1.1.0` | Feature-gated soft dependency for CheatConsole APIs |
 | `Blasphemous.Framework.Levels` | `0.1.4` | Feature-gated soft dependency for Level Framework APIs |
+| `Blasphemous.Framework.UI` | `0.2.0` | Feature-gated soft dependency for UI pooling APIs |
 
 ## Public API
 
 - **CheatConsole commands and logging** — `CheatConsoleLogging` and `LogLevel` provide opt-in console input/output logging; `AutoModCommand` and `ModSubCommandAttribute` provide attribute-based mod command registration.
 - **Mod-owned flags** — `ModFlagsManager` provides owner-scoped boolean flags backed by the vanilla event system.
 - **Runtime resource storage** — `SpriteStorage`, `AnimationStorage`, `SpriteImportInfo`, `AnimationInfo`, and `AnimationImportInfo` organize per-mod sprite and animation resources plus import metadata.
-- **Components** — `ModAnimator` displays stored animation data, and `ItemCollection<T>` collects matching public fields as items.
+- **Components** — `ModAnimator` displays stored animation data, `ItemCollection<T>` collects matching public fields as items, and `UIObjectPoolManager` reuses UI objects scoped to a canvas, consuming mod, and prefab.
 - **Serialization** — `SerializableVector3`, `UnityEngineIgnoreConverter`, and `JsonSerializerSettingsFactory` provide Unity-value and JSON serialization helpers.
 - **ModdingAPI extensions** — `ConfigHandlerExtensions`, `FileHandlerExtensions`, `InputHandlerExtensions`, `LocalizationHandlerExtensions`, `ModCommandExtensions`, and `ModLogExtensions` cover configuration, files/JSON, input, localization, commands, and logging.
 - **GameLibs extensions** — `InventoryManagerExtensions`, `I2Extensions`, `UnityExtensions`, `EnemyHealthBarExtensions`, `NewInventoryWidgetExtensions`, `EntityOrientationExtensions`, and `TraverseUtils` cover inventory, translation, Unity, enemy/boss/UI, traversal, and orientation helpers.
