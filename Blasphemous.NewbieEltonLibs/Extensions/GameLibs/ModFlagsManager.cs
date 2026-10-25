@@ -1,8 +1,7 @@
 using Blasphemous.ModdingAPI;
-using Blasphemous.ModdingAPI.Helpers;
+using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
 using Framework.Managers;
 using System;
-using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
@@ -56,7 +55,7 @@ public static class ModFlagsManager
 
     private static bool RegisterFlag(string localName, Type? modType, Assembly callingAssembly, bool preserveInNewGamePlus)
     {
-        if (!TryResolveMod(modType, callingAssembly, out BlasMod? mod) || mod == null)
+        if (!ModIdentityResolver.TryResolveMod(modType, callingAssembly, out BlasMod? mod) || mod == null)
             return false;
 
         if (_registry.TryRegister(mod.GetType(), mod.Id, localName, preserveInNewGamePlus, out _))
@@ -94,7 +93,7 @@ public static class ModFlagsManager
     private static bool TryGetFlag(string localName, Type? modType, Assembly callingAssembly, out bool value)
     {
         value = false;
-        if (!TryResolveMod(modType, callingAssembly, out BlasMod? mod) || mod == null)
+        if (!ModIdentityResolver.TryResolveMod(modType, callingAssembly, out BlasMod? mod) || mod == null)
             return false;
 
         if (!_registry.TryGet(mod.GetType(), mod.Id, localName, out ModFlagInfo? registration) || registration == null)
@@ -146,7 +145,7 @@ public static class ModFlagsManager
 
     private static bool TrySetFlag(string localName, Type? modType, Assembly callingAssembly, bool value)
     {
-        if (!TryResolveMod(modType, callingAssembly, out BlasMod? mod) || mod == null)
+        if (!ModIdentityResolver.TryResolveMod(modType, callingAssembly, out BlasMod? mod) || mod == null)
             return false;
 
         if (!_registry.TryGet(mod.GetType(), mod.Id, localName, out ModFlagInfo? registration) || registration == null)
@@ -191,95 +190,4 @@ public static class ModFlagsManager
         return false;
     }
 
-    internal static bool TryResolveMod(Type? modType, Assembly callingAssembly, out BlasMod? mod)
-    {
-        return TryResolveMod(modType, callingAssembly, explicitOwner: null, out mod);
-    }
-
-    internal static bool TryResolveMod(BlasMod explicitOwner, out BlasMod? mod)
-    {
-        if (explicitOwner == null)
-        {
-            mod = null;
-            ModLog.Error("Cannot resolve the explicit mod identity because the mod is null.");
-            return false;
-        }
-
-        return TryResolveMod(explicitOwner.GetType(), typeof(ModFlagsManager).Assembly, explicitOwner, out mod);
-    }
-
-    private static bool TryResolveMod(Type? modType, Assembly callingAssembly, BlasMod? explicitOwner, out BlasMod? mod)
-    {
-        mod = null;
-        if (modType != null && (!typeof(BlasMod).IsAssignableFrom(modType) || modType.IsAbstract))
-        {
-            LogResolutionError($"Cannot resolve mod identity from invalid mod type '{modType}'.", explicitOwner);
-            return false;
-        }
-
-        IEnumerable<BlasMod>? loadedMods;
-        try
-        {
-            loadedMods = ModHelper.LoadedMods;
-        }
-        catch (Exception exception)
-        {
-            LogResolutionError($"Failed to resolve mod identity: {exception.Message}", explicitOwner);
-            return false;
-        }
-
-        if (loadedMods == null)
-        {
-            LogResolutionError("Cannot resolve mod identity because no loaded mod list is available.", explicitOwner);
-            return false;
-        }
-
-        BlasMod? match = null;
-        int matchCount = 0;
-        try
-        {
-            foreach (BlasMod candidate in loadedMods)
-            {
-                if (candidate == null)
-                    continue;
-
-                Type candidateType = candidate.GetType();
-                bool isMatch = explicitOwner != null
-                    ? ReferenceEquals(candidate, explicitOwner)
-                    : modType != null
-                        ? candidateType == modType
-                        : candidateType.Assembly == callingAssembly;
-                if (!isMatch)
-                    continue;
-
-                match = candidate;
-                matchCount++;
-            }
-        }
-        catch (Exception exception)
-        {
-            LogResolutionError($"Failed to resolve mod identity for '{modType}': {exception.Message}", explicitOwner);
-            return false;
-        }
-
-        if (matchCount != 1 || match == null)
-        {
-            string identity = explicitOwner != null
-                ? $"explicit mod instance '{explicitOwner.GetType()}'"
-                : modType == null ? $"calling assembly '{callingAssembly.FullName}'" : $"mod type '{modType}'";
-            LogResolutionError($"Cannot resolve mod identity for {identity}: expected one loaded mod, found {matchCount}.", explicitOwner);
-            return false;
-        }
-
-        mod = match;
-        return true;
-    }
-
-    private static void LogResolutionError(string message, BlasMod? explicitOwner)
-    {
-        if (explicitOwner == null)
-            ModLog.Error(message);
-        else
-            ModLog.Error(message, explicitOwner);
-    }
 }

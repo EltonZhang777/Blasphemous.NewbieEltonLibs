@@ -1,6 +1,7 @@
 using Blasphemous.Framework.UI;
 using Blasphemous.ModdingAPI;
 using Blasphemous.NewbieEltonLibs.Extensions.GameLibs;
+using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
 using Framework.Pooling;
 using System;
 using System.Collections.Generic;
@@ -80,7 +81,7 @@ public sealed class UIObjectPoolManager : MonoBehaviour
             return null;
         }
 
-        if (!ModFlagsManager.TryResolveMod(owner, out BlasMod? resolvedOwner) || resolvedOwner == null)
+        if (!ModIdentityResolver.TryResolveMod(owner, out BlasMod? resolvedOwner) || resolvedOwner == null)
             return null;
 
         return ReuseObjectForMod(prefab, position, rotation, resolvedOwner, createPoolIfNeeded, poolSize);
@@ -106,7 +107,7 @@ public sealed class UIObjectPoolManager : MonoBehaviour
         bool createPoolIfNeeded,
         int poolSize)
     {
-        if (!ModFlagsManager.TryResolveMod(modType, callingAssembly, out BlasMod? owner) || owner == null)
+        if (!ModIdentityResolver.TryResolveMod(modType, callingAssembly, out BlasMod? owner) || owner == null)
             return null;
 
         return ReuseObjectForMod(prefab, position, rotation, owner, createPoolIfNeeded, poolSize);
@@ -221,29 +222,22 @@ public sealed class UIObjectPoolManager : MonoBehaviour
     /// <summary>
     /// Wraps a pooled object and applies the standard activation and reuse callback behavior.
     /// </summary>
-    public sealed class ObjectInstance
+    /// <remarks>
+    /// Creates a wrapper for a pooled game object.
+    /// </remarks>
+    /// <param name="gameObject">The object represented by this wrapper.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="gameObject"/> is <see langword="null"/>.</exception>
+    public sealed class ObjectInstance(GameObject gameObject)
     {
-        private readonly Transform _transform;
-        private readonly PoolObject[] _poolObjectScripts;
-
-        /// <summary>
-        /// Creates a wrapper for a pooled game object.
-        /// </summary>
-        /// <param name="gameObject">The object represented by this wrapper.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="gameObject"/> is <see langword="null"/>.</exception>
-        public ObjectInstance(GameObject gameObject)
-        {
-            GameObject = gameObject ?? throw new ArgumentNullException(nameof(gameObject));
-            _transform = gameObject.transform;
-            _poolObjectScripts = gameObject.GetComponent<PoolObject>() == null
+        private readonly Transform _transform = gameObject.transform;
+        private readonly PoolObject[] _poolObjectScripts = gameObject.GetComponent<PoolObject>() == null
                 ? []
                 : gameObject.GetComponents<PoolObject>();
-        }
 
         /// <summary>
         /// Gets the game object represented by this wrapper.
         /// </summary>
-        public GameObject GameObject { get; }
+        public GameObject GameObject { get; } = gameObject ?? throw new ArgumentNullException(nameof(gameObject));
 
         /// <summary>
         /// Activates the object, updates its world transform, and notifies its pool components.
