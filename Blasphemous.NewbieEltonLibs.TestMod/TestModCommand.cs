@@ -586,6 +586,13 @@ internal sealed class TestModCommand : AutoModCommand
         Write("S7 import requests started; inspect output_log.txt for S7| lines.");
     }
 
+    [ModSubCommand("s8-sound-playback", "verify FMOD sound import, storage, and one-shot playback", validLengths: [0])]
+    private void RunSoundPlayback(string[] parameters)
+    {
+        _mod.StartFMODSoundPlaybackCheck(Thread.CurrentThread.ManagedThreadId);
+        Write("S8 playback request started; inspect output_log.txt for S8| lines and confirm the test audio is audible.");
+    }
+
     private sealed class SoundImportVerification
     {
         private const int RequestCount = 4;

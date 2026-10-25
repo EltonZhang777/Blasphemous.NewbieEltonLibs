@@ -1,11 +1,13 @@
 using Blasphemous.CheatConsole;
 using Blasphemous.ModdingAPI;
 using Blasphemous.ModdingAPI.Input;
+using Blasphemous.NewbieEltonLibs.Audio;
 using Blasphemous.NewbieEltonLibs.Components;
 using Blasphemous.NewbieEltonLibs.Extensions.GameLibs;
 using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
 using Blasphemous.NewbieEltonLibs.Storage;
 using FMOD;
+using FMODUnity;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -24,8 +26,26 @@ internal sealed class NewbieEltonLibsTestMod : BlasMod
     private Sprite? _lastTrackedSprite;
     private readonly object _workerStateLock = new();
     private readonly Queue<string> _workerLogs = new();
+    private readonly Queue<PendingSoundPlayback> _pendingSoundPlaybacks = new();
     private readonly List<FMOD.Sound> _ownedImportedSounds = new();
+    private readonly FMODSoundStorage _fmodSoundStorage = new();
     private bool _gameExited = true;
+
+    private sealed class PendingSoundPlayback
+    {
+        internal readonly FMODSoundImportResult Result;
+        internal readonly FMOD.System LowlevelSystem;
+        internal readonly int MainThreadId;
+        internal readonly int CallbackThreadId;
+
+        internal PendingSoundPlayback(FMOD.System lowlevelSystem, FMODSoundImportResult result, int mainThreadId, int callbackThreadId)
+        {
+            LowlevelSystem = lowlevelSystem;
+            Result = result;
+            MainThreadId = mainThreadId;
+            CallbackThreadId = callbackThreadId;
+        }
+    }
 
     internal NewbieEltonLibsTestMod(MonoBehaviour coroutineHost)
         : base(ModInfo.ModId, ModInfo.ModName, ModInfo.ModAuthor, ModInfo.ModVersion)
@@ -70,6 +90,7 @@ internal sealed class NewbieEltonLibsTestMod : BlasMod
     protected override void OnUpdate()
     {
         FlushWorkerLogs();
+        ProcessPendingSoundPlaybacks();
 
         int axisEdge = InputHandler.GetAxisDown(AxisCode.MoveHorizontal, true);
         if (axisEdge != 0)
@@ -125,6 +146,21 @@ internal sealed class NewbieEltonLibsTestMod : BlasMod
         Log($"S6|sound-storage|{(passed ? "PASS" : "FAIL")}|registered={registered}|lookup={lookup}|duplicateRejected={duplicateRejected}|isolated={isolated}");
     }
 
+    internal void StartFMODSoundPlaybackCheck(int mainThreadId)
+    {
+        try
+        {
+            FMOD.System lowlevelSystem = RuntimeManager.LowlevelSystem;
+            FMODSoundImporter.ImportAsync(lowlevelSystem, FileHandler, "audio/test_meme.mp3",
+                result => QueueSoundPlayback(lowlevelSystem, result, mainThreadId));
+            Log("S8|request|START|file=audio/test_meme.mp3");
+        }
+        catch (Exception exception)
+        {
+            Log($"S8|playback|FAIL|request could not be queued: {exception}");
+        }
+    }
+
     private IEnumerator VerifyAudioImport(AudioClipStorage audioClips, string label, string name, string path,
         bool expectSuccess, string? expectedFailure = null)
     {
@@ -172,6 +208,95 @@ internal sealed class NewbieEltonLibsTestMod : BlasMod
         lock (_workerStateLock)
         {
             _workerLogs.Enqueue(message);
+        }
+    }
+
+    private void QueueSoundPlayback(FMOD.System lowlevelSystem, FMODSoundImportResult result, int mainThreadId)
+    {
+        int callbackThreadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
+        lock (_workerStateLock)
+        {
+            if (!_gameExited)
+            {
+                if (result.Succeeded)
+                {
+                    _ownedImportedSounds.Add(result.Sound);
+                }
+
+                _pendingSoundPlaybacks.Enqueue(new PendingSoundPlayback(lowlevelSystem, result, mainThreadId, callbackThreadId));
+                return;
+            }
+        }
+
+        if (result.Succeeded)
+        {
+            ReleaseLateImportedSound(result.Sound);
+        }
+        QueueWorkerLog($"S8|playback|FAIL|game exited before the import callback could be processed;error={result.ErrorMessage}");
+    }
+
+    private void ReleaseLateImportedSound(FMOD.Sound sound)
+    {
+        try
+        {
+            if (sound.hasHandle())
+            {
+                FMOD.RESULT result = sound.release();
+                if (result != FMOD.RESULT.OK)
+                {
+                    QueueWorkerLog($"S8|late-release|FAIL|result={result}");
+                }
+            }
+        }
+        catch (Exception exception)
+        {
+            QueueWorkerLog($"S8|late-release|FAIL|exception={exception}");
+        }
+    }
+
+    private void ProcessPendingSoundPlaybacks()
+    {
+        while (true)
+        {
+            PendingSoundPlayback pending;
+            lock (_workerStateLock)
+            {
+                if (_pendingSoundPlaybacks.Count == 0)
+                {
+                    return;
+                }
+
+                pending = _pendingSoundPlaybacks.Dequeue();
+            }
+
+            if (!pending.Result.Succeeded)
+            {
+                Log($"S8|playback|FAIL|import failed;callbackThread={pending.CallbackThreadId};mainThread={pending.MainThreadId};error={pending.Result.ErrorMessage}");
+                continue;
+            }
+
+            bool callbackOffMainThread = pending.CallbackThreadId != pending.MainThreadId;
+            bool runningOnMainThread = System.Threading.Thread.CurrentThread.ManagedThreadId == pending.MainThreadId;
+            bool registered = _fmodSoundStorage.TryRegister("test-meme", pending.Result.Sound)
+                || _fmodSoundStorage.TryReplace("test-meme", pending.Result.Sound);
+            bool retrieved = _fmodSoundStorage.TryGet("test-meme", out Sound sound)
+                && sound.handle == pending.Result.Sound.handle;
+
+            if (!callbackOffMainThread || !runningOnMainThread || !registered || !retrieved)
+            {
+                Log($"S8|playback|FAIL|callbackOffMain={callbackOffMainThread};handoffMain={runningOnMainThread};registered={registered};retrieved={retrieved}");
+                continue;
+            }
+
+            try
+            {
+                FMOD.RESULT result = FMODSoundPlayer.PlayOnce(pending.LowlevelSystem, sound);
+                Log($"S8|playback|{(result == FMOD.RESULT.OK ? "PASS" : "FAIL")}|callbackOffMain={callbackOffMainThread};handoffMain={runningOnMainThread};registered={registered};retrieved={retrieved};result={result};oneShot=true");
+            }
+            catch (Exception exception)
+            {
+                Log($"S8|playback|FAIL|callbackOffMain={callbackOffMainThread};handoffMain={runningOnMainThread};registered={registered};retrieved={retrieved};exception={exception}");
+            }
         }
     }
 
@@ -230,6 +355,7 @@ internal sealed class NewbieEltonLibsTestMod : BlasMod
         lock (_workerStateLock)
         {
             _gameExited = true;
+            _pendingSoundPlaybacks.Clear();
             sounds = _ownedImportedSounds.ToArray();
             _ownedImportedSounds.Clear();
         }
