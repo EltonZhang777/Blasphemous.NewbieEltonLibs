@@ -4,7 +4,7 @@ status: accepted
 
 # Use per-mod runtime resource registries
 
-The reusable storage API will use per-mod instances. Consuming mods create, register, and replace their own Sprite and Animation resources; storage does not read `sprites.json` or `animations.json`, does not depend on `FileHandler` for automatic importing, and does not destroy Unity resources. This keeps resource creation and lifecycle ownership with the mod that created the resource and avoids a process-wide name collision domain.
+The reusable storage API will use per-mod instances. Consuming mods create, register, and replace their own Sprite, Animation, and FMOD Sound resources; storage does not read `sprites.json` or `animations.json`, does not depend on `FileHandler` for automatic importing, and does not destroy Unity resources or release FMOD Sounds. This keeps resource creation and lifecycle ownership with the mod that created the resource and avoids a process-wide name collision domain.
 
 The Sprite and Animation import restriction does not prohibit an explicitly requested AudioClip import flow. `AudioClipStorage` may import MP3 and PCM WAV files from the consuming mod's `FileHandler` data directory when the mod starts the operation; successful clips remain non-owning storage references, and the consuming mod owns their lifetime and destruction.
 

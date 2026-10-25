@@ -5,6 +5,7 @@ using Blasphemous.NewbieEltonLibs.Components;
 using Blasphemous.NewbieEltonLibs.Extensions.GameLibs;
 using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
 using Blasphemous.NewbieEltonLibs.Storage;
+using FMOD;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -97,6 +98,22 @@ internal sealed class NewbieEltonLibsTestMod : BlasMod
             "The audio path cannot contain a parent directory segment."));
         _coroutineHost.StartCoroutine(VerifyAudioImport(audioClips, "unsupported", "unsupported-format", "audio/clip.ogg", false,
             "Only MP3 and PCM WAV files are supported."));
+    }
+
+    internal void StartFMODSoundStorageSmokeCheck()
+    {
+        FMODSoundStorage first = new();
+        FMODSoundStorage second = new();
+        Sound sound = new() { handle = new IntPtr(75) };
+        Sound duplicate = new() { handle = new IntPtr(76) };
+
+        bool registered = first.TryRegister("smoke", sound);
+        bool duplicateRejected = !first.TryRegister("smoke", duplicate);
+        bool lookup = first.TryGet("smoke", out Sound stored) && stored.handle == sound.handle;
+        bool isolated = !second.TryGet("smoke", out _);
+        bool passed = registered && duplicateRejected && lookup && isolated;
+
+        Log($"S6|sound-storage|{(passed ? "PASS" : "FAIL")}|registered={registered}|lookup={lookup}|duplicateRejected={duplicateRejected}|isolated={isolated}");
     }
 
     private IEnumerator VerifyAudioImport(AudioClipStorage audioClips, string label, string name, string path,

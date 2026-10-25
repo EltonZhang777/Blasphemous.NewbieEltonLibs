@@ -30,6 +30,11 @@ two cases must fail once without adding an entry. The smoke check does not play
 the clips. TestMod destroys each successful fixture clip after checking its
 callback and storage result; AudioClipStorage does not own or destroy clips.
 
+Run `newbie-test s6-sound-storage` to verify FMOD Sound registration, lookup,
+duplicate rejection, and per-instance isolation through the consuming mod's
+public API. The `S6|sound-storage|PASS` log records each result. This storage-only
+check uses placeholder handles and does not call FMOD or release a sound.
+
 From the repository root, use the configured `blasphemous-modding-test` CLI:
 
 ```powershell
