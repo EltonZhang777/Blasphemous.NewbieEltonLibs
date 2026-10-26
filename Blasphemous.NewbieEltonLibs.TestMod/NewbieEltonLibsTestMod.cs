@@ -150,15 +150,26 @@ internal sealed class NewbieEltonLibsTestMod : BlasMod
     {
         try
         {
+            // The playback check can run after the current save session has exited.
+            SetGameActive();
+            string gameMode = global::Framework.Managers.Core.GameModeManager.GetCurrentGameModeName();
             FMOD.System lowlevelSystem = RuntimeManager.LowlevelSystem;
             FMODSoundImporter.ImportAsync(lowlevelSystem, FileHandler, "audio/test_meme.mp3",
                 result => QueueSoundPlayback(lowlevelSystem, result, mainThreadId));
-            Log("S8|request|START|file=audio/test_meme.mp3");
+            Log($"S8|request|START|file=audio/test_meme.mp3;mode={gameMode}");
         }
         catch (Exception exception)
         {
             Log($"S8|playback|FAIL|request could not be queued: {exception}");
         }
+    }
+
+    internal void StartFMODSoundImportVerification(IEnumerator verification)
+    {
+        SetGameActive();
+        string gameMode = global::Framework.Managers.Core.GameModeManager.GetCurrentGameModeName();
+        Log($"S7|request|START|mode={gameMode}");
+        _coroutineHost.StartCoroutine(verification);
     }
 
     private IEnumerator VerifyAudioImport(AudioClipStorage audioClips, string label, string name, string path,

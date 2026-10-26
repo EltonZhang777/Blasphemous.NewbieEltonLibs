@@ -582,8 +582,9 @@ internal sealed class TestModCommand : AutoModCommand
     [ModSubCommand("s7-sound-import", "verify asynchronous FMOD sound imports", validLengths: [0])]
     private void RunSoundImports(string[] parameters)
     {
-        new SoundImportVerification(_mod, Thread.CurrentThread.ManagedThreadId).Start();
-        Write("S7 import requests started; inspect output_log.txt for S7| lines.");
+        _mod.StartFMODSoundImportVerification(
+            new SoundImportVerification(_mod, Thread.CurrentThread.ManagedThreadId).Start());
+        Write("S7 import requests started sequentially; inspect output_log.txt for S7| lines.");
     }
 
     [ModSubCommand("s8-sound-playback", "verify FMOD sound import, storage, and one-shot playback", validLengths: [0])]
@@ -605,7 +606,6 @@ internal sealed class TestModCommand : AutoModCommand
         private readonly bool[] _passed = new bool[RequestCount];
         private readonly object _sync = new();
         private int _summaryReported;
-        private Timer? _summaryTimer;
 
         internal SoundImportVerification(NewbieEltonLibsTestMod mod, int mainThreadId)
         {
@@ -613,15 +613,36 @@ internal sealed class TestModCommand : AutoModCommand
             _mainThreadId = mainThreadId;
         }
 
-        internal void Start()
+        internal IEnumerator Start()
         {
-            _summaryTimer = new Timer(_ => ReportSummary("observation-complete"), null,
-                CallbackTimeoutMilliseconds, Timeout.Infinite);
+            float deadline = Time.realtimeSinceStartup + CallbackTimeoutMilliseconds / 1000f;
+            string[] names = { "mp3", "pcm-wav", "missing", "outside" };
+            string[] fileNames =
+            {
+                "audio/test_meme.mp3",
+                "audio/smoke.wav",
+                "audio/__s6_missing__.mp3",
+                Path.Combine("..", "__s6_outside__.mp3")
+            };
 
-            StartImport(0, "mp3", "audio/test_meme.mp3", true);
-            StartImport(1, "pcm-wav", "audio/smoke.wav", true);
-            StartImport(2, "missing", "audio/__s6_missing__.mp3", false);
-            StartImport(3, "outside", Path.Combine("..", "__s6_outside__.mp3"), false);
+            // shortcut: S7 serializes imports; test overlap only if #76 adds a concurrency guarantee.
+            for (int index = 0; index < RequestCount; index++)
+            {
+                StartImport(index, names[index], fileNames[index], index < 2);
+                while (Interlocked.CompareExchange(ref _completedRequests[index], 0, 0) == 0
+                    && Time.realtimeSinceStartup < deadline)
+                {
+                    yield return null;
+                }
+
+                if (Interlocked.CompareExchange(ref _completedRequests[index], 0, 0) == 0)
+                {
+                    ReportSummary("callback-timeout");
+                    yield break;
+                }
+            }
+
+            ReportSummary("all-requests-complete");
         }
 
         private void StartImport(int index, string name, string fileName, bool expectedSuccess)
@@ -684,7 +705,7 @@ internal sealed class TestModCommand : AutoModCommand
                 bool outcomesPassed = true;
                 string counts = "";
                 string missing = "";
-                string[] names = ["mp3", "pcm-wav", "missing", "outside"];
+                string[] names = { "mp3", "pcm-wav", "missing", "outside" };
                 for (int i = 0; i < RequestCount; i++)
                 {
                     int count = Interlocked.CompareExchange(ref _callbackCounts[i], 0, 0);
@@ -700,8 +721,6 @@ internal sealed class TestModCommand : AutoModCommand
 
                 bool passed = cardinalityPassed && outcomesPassed;
                 _mod.QueueWorkerLog($"S7|summary|{(passed ? "PASS" : "FAIL")}|reason={reason};callbackCardinality={(cardinalityPassed ? "PASS" : "FAIL")};outcomesAndThreads={(outcomesPassed ? "PASS" : "FAIL")};counts={counts};missing={missing};observationWindowMs={CallbackTimeoutMilliseconds}");
-                _summaryTimer?.Dispose();
-                _summaryTimer = null;
             }
         }
     }
