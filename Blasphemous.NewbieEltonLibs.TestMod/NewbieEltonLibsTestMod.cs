@@ -119,17 +119,6 @@ internal sealed class NewbieEltonLibsTestMod : BlasMod
         ModLog.Info($"[{ModInfo.ModId}] {message}", this);
     }
 
-    internal void StartAudioSmokeCheck()
-    {
-        AudioClipStorage audioClips = new();
-        _coroutineHost.StartCoroutine(VerifyAudioImport(audioClips, "mp3", "smoke-mp3", "audio/smoke.mp3", true));
-        _coroutineHost.StartCoroutine(VerifyAudioImport(audioClips, "wav", "smoke-wav", "audio/smoke.wav", true));
-        _coroutineHost.StartCoroutine(VerifyAudioImport(audioClips, "traversal", "unsafe-path", "../outside.mp3", false,
-            "The audio path cannot contain a parent directory segment."));
-        _coroutineHost.StartCoroutine(VerifyAudioImport(audioClips, "unsupported", "unsupported-format", "audio/clip.ogg", false,
-            "Only MP3 and PCM WAV files are supported."));
-    }
-
     internal void StartFMODSoundStorageSmokeCheck()
     {
         FMODSoundStorage first = new();
@@ -170,48 +159,6 @@ internal sealed class NewbieEltonLibsTestMod : BlasMod
         string gameMode = global::Framework.Managers.Core.GameModeManager.GetCurrentGameModeName();
         Log($"S7|request|START|mode={gameMode}");
         _coroutineHost.StartCoroutine(verification);
-    }
-
-    private IEnumerator VerifyAudioImport(AudioClipStorage audioClips, string label, string name, string path,
-        bool expectSuccess, string? expectedFailure = null)
-    {
-        int successCount = 0;
-        int failureCount = 0;
-        string? callbackName = null;
-        AudioClip? importedClip = null;
-        string? failure = null;
-
-        yield return audioClips.ImportAsync(FileHandler, name, path,
-            (completedName, clip) =>
-            {
-                successCount++;
-                callbackName = completedName;
-                importedClip = clip;
-            },
-            (completedName, message) =>
-            {
-                failureCount++;
-                callbackName = completedName;
-                failure = message;
-            });
-        yield return null;
-
-        try
-        {
-            bool stored = audioClips.TryGet(name, out AudioClip? storedClip);
-            bool passed = expectSuccess
-                ? successCount == 1 && failureCount == 0 && callbackName == name && stored && storedClip == importedClip
-                : successCount == 0 && failureCount == 1 && callbackName == name && !stored && failure == expectedFailure;
-
-            Log($"S5|{label}|{(passed ? "PASS" : "FAIL")}|success={successCount}|failure={failureCount}|name={callbackName ?? "none"}|stored={stored}|reason={failure ?? "none"}");
-        }
-        finally
-        {
-            if (importedClip is not null)
-            {
-                UnityEngine.Object.Destroy(importedClip);
-            }
-        }
     }
 
     internal void QueueWorkerLog(string message)

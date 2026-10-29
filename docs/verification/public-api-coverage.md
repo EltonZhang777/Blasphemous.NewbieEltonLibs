@@ -1,7 +1,7 @@
 # Public API coverage status
 
-This record maps the public API coverage work to its verification boundary. S1–S6
-are verification slices, not production modules.
+This record maps the public API coverage work to its verification boundary. S1–S4
+and S6–S8 are verification slices, not production modules.
 
 ## Automated coverage
 
@@ -14,8 +14,9 @@ are verification slices, not production modules.
 | S4 / #40 | Serializable vectors, Unity converter, JSON presets, and System extensions | `SerializationCoverageTests`, `SystemExtensionsCoverageTests` |
 | S4 / #41–#42 | Deterministic orientation failure, translation parsing, inventory prefixes, traversal validation, and game-bound signatures | `GameLibsCoverageTests` |
 | S4 / #43–#44 | File/config JSON round trips, keybinding lookup, command validation, and ModdingAPI signatures | `ModdingApiCoverageTests` |
-| S5 / #66–#68 | Per-mod AudioClip storage, Data path confinement, and asynchronous MP3/PCM WAV callbacks | `AudioClipStorageTests`; TestMod `s5-audio` game smoke |
 | S6 / #75 | Per-mod FMOD Sound storage, strict/Try registration, explicit replacement, and non-owning lifetime | `FMODSoundStorageTests`; TestMod `s6-sound-storage` consumer smoke |
+| S7 / #76 | Asynchronous MP3/PCM WAV import as FMOD Sounds, data-path confinement, callback cardinality, and worker-thread callbacks | `FMODSoundImporterTests`; TestMod `s7-sound-import` game smoke |
+| S8 / #77 | One-shot playback of a registered FMOD Sound after the callback-to-main-thread handoff | TestMod `s8-sound-playback` game smoke |
 
 The automated suite is an external-consumer net8 test project referencing the
 net35 library. Internal registries and private state are used only to arrange
@@ -54,19 +55,24 @@ than being reported as passed:
    transitions, localization target/default/error behavior, and console-widget
    access/parameter validation wording. Keep the consuming smoke assembly as the
    signature/compile check for every public overload.
-6. In a real Unity/BepInEx session, run `newbie-test s5-audio`. Verify the MP3
-   and PCM WAV cases each log exactly one success callback and a stored entry;
-   verify traversal and unsupported-format cases each log exactly one failure
-   callback and no entry. The smoke check must not play or destroy the clips.
-   Building TestMod proves compilation and packaging only; record real game logs
-   before treating this check as passed.
-7. In a real Unity/BepInEx session, run `newbie-test s6-sound-storage`. Verify
+6. In a real Unity/BepInEx session, run `newbie-test s6-sound-storage`. Verify
    `S6|sound-storage|PASS` reports registration, lookup, duplicate rejection,
    and per-instance isolation. The check uses placeholder handles and does not
    create or release an FMOD Sound; building TestMod proves compilation and
    packaging only. Record real game logs before treating this check as passed.
+7. Manually play an existing FMOD Studio event and confirm its playback remains
+   unchanged. The S8 smoke exercises low-level FMOD Sound playback, not Studio events.
 
-The real-game results should be appended here by the manual verifier; no broad
-Unity simulator, upstream modification, or duplicated vanilla persistence is
-part of this coverage change. The reproducible issue packet is
+## Recorded real-game evidence
+
+- **S7 / #76 (2026-10-26):** In MENU, MP3 and PCM WAV imports succeeded once
+  each on worker threads; missing-file and escaping-path requests failed once
+  each. [Issue verification record](https://github.com/EltonZhang777/Blasphemous.NewbieEltonLibs/issues/76#issuecomment-6401073142).
+- **S8 / #77 (2026-10-26):** One-shot playback passed in MENU, BOSS_RUSH,
+  NEW_GAME, and NEW_GAME_PLUS; the user confirmed audible playback.
+  [Issue verification record](https://github.com/EltonZhang777/Blasphemous.NewbieEltonLibs/issues/77#issuecomment-6401070098).
+
+Future real-game results should be appended here by the manual verifier; no
+broad Unity simulator, upstream modification, or duplicated vanilla persistence
+is part of this coverage change. The reproducible issue packet is
 [`issue-49-evidence.md`](issue-49-evidence.md).

@@ -7,33 +7,28 @@ plugin assemblies and its localization resource:
 ```text
 publish/NewbieEltonLibsTestMod/plugins/NewbieEltonLibsTestMod.dll
 publish/NewbieEltonLibsTestMod/plugins/Blasphemous.NewbieEltonLibs.dll
-publish/NewbieEltonLibsTestMod/plugins/NLayer.dll
 publish/NewbieEltonLibsTestMod/localization/Newbie Elton Libraries Test Mod.txt
-publish/NewbieEltonLibsTestMod/data/Newbie Elton Libraries Test Mod/audio/smoke.mp3
 publish/NewbieEltonLibsTestMod/data/Newbie Elton Libraries Test Mod/audio/smoke.wav
-publish/NewbieEltonLibsTestMod/THIRD-PARTY-NOTICES.txt
+publish/NewbieEltonLibsTestMod/data/Newbie Elton Libraries Test Mod/audio/test_meme.mp3
 ```
 
 GameLibs 4.0.67, ModdingAPI 3.0.1, CheatConsole 1.1.0, and Framework.Levels
 0.1.4 are compile-time references only. The package does not copy upstream
 framework or game assemblies; the selected profile supplies those dependencies.
-The two short audio files are fixtures for `newbie-test s5-audio` and are copied
-into the test mod's Data directory so the import flow can exercise both codecs.
-The package includes a Mono-compatible NLayer decoder because the game's
-desktop Unity runtime does not support runtime MP3 decoding through
-`WWW.GetAudioClip`.
-
-In the game console, run `newbie-test s5-audio`. The TestMod logs `S5|mp3`,
-`S5|wav`, `S5|traversal`, and `S5|unsupported` results. Each line records the
-success/failure callback counts and whether an AudioClip was stored; the last
-two cases must fail once without adding an entry. The smoke check does not play
-the clips. TestMod destroys each successful fixture clip after checking its
-callback and storage result; AudioClipStorage does not own or destroy clips.
+The WAV and MP3 files are fixtures for the FMOD import and playback checks:
+`smoke.wav` exercises PCM WAV import, and `test_meme.mp3` exercises MP3 import
+and one-shot playback.
 
 Run `newbie-test s6-sound-storage` to verify FMOD Sound registration, lookup,
 duplicate rejection, and per-instance isolation through the consuming mod's
 public API. The `S6|sound-storage|PASS` log records each result. This storage-only
 check uses placeholder handles and does not call FMOD or release a sound.
+
+Run `newbie-test s7-sound-import` to verify MP3 and PCM WAV success, missing
+file and path-escape failures, callback cardinality, and worker-thread callbacks.
+Run `newbie-test s8-sound-playback` to verify main-thread handoff, storage
+registration/retrieval, and one-shot playback; confirm that the test audio is
+audible. S8 exercises low-level FMOD Sound playback, not FMOD Studio events.
 
 From the repository root, use the configured `blasphemous-modding-test` CLI:
 
