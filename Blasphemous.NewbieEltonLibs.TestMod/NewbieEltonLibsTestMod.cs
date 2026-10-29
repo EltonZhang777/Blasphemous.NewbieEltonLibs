@@ -85,6 +85,7 @@ internal sealed class NewbieEltonLibsTestMod : BlasMod
     protected override void OnRegisterServices(ModServiceProvider provider)
     {
         provider.RegisterCommand(new TestModCommand(this));
+        provider.RegisterCommand(new UIPoolSmokeCommand(this));
     }
 
     protected override void OnUpdate()
