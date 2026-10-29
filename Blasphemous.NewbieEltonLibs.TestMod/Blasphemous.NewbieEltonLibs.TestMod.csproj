@@ -33,6 +33,7 @@
     <PackageReference Include="Blasphemous.ModdingAPI" Version="3.0.1" />
     <PackageReference Include="Blasphemous.CheatConsole" Version="1.1.0" />
     <PackageReference Include="Blasphemous.Framework.Levels" Version="0.1.4" />
+    <AudioTestFiles Include="$(MSBuildProjectDirectory)\resources\audio\**\*.*" />
     <LocalizationFiles Include="$(MSBuildProjectDirectory)\resources\localization\**\*.*" />
   </ItemGroup>
 
@@ -40,9 +41,11 @@
     <RemoveDir Directories="$(PackageRoot)" />
     <MakeDir Directories="$(PackageRoot)\plugins" />
     <MakeDir Directories="$(PackageRoot)\localization" />
+    <MakeDir Directories="$(PackageRoot)\data\$(Title)\audio" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PackageRoot)\plugins" />
     <Copy SourceFiles="$(ProductionLibraryPath)" DestinationFolder="$(PackageRoot)\plugins" />
     <Copy SourceFiles="@(LocalizationFiles)" DestinationFolder="$(PackageRoot)\localization" />
+    <Copy SourceFiles="@(AudioTestFiles)" DestinationFolder="$(PackageRoot)\data\$(Title)\audio" />
   </Target>
 
 </Project>

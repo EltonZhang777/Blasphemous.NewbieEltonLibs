@@ -8,6 +8,8 @@ Debug build consumes the production library built in Release. Its
 publish/NewbieEltonLibsTestMod/plugins/NewbieEltonLibsTestMod.dll
 publish/NewbieEltonLibsTestMod/plugins/Blasphemous.NewbieEltonLibs.dll
 publish/NewbieEltonLibsTestMod/localization/Newbie Elton Libraries Test Mod.txt
+publish/NewbieEltonLibsTestMod/data/Newbie Elton Libraries Test Mod/audio/smoke.wav
+publish/NewbieEltonLibsTestMod/data/Newbie Elton Libraries Test Mod/audio/test_meme.mp3
 ```
 
 `Blasphemous.NewbieEltonLibs.TestModB` (B) references A and uses the same
@@ -20,9 +22,24 @@ after any such A build.
 
 GameLibs 4.0.67, Framework.UI 0.2.0, ModdingAPI 3.0.1, and CheatConsole 1.1.0
 are compile-time references for both projects; Framework.Levels 0.1.4 is also
-referenced by A. The package targets copy only the listed project assemblies
-and A's localization resource, so the selected profile supplies the upstream
-framework and game assemblies.
+referenced by A. A's package target copies its plugin, the library assembly,
+localization, and audio fixtures; B's target adds only its own plugin. Neither
+target packages upstream framework or game assemblies, which the selected
+profile supplies.
+The WAV and MP3 files are fixtures for the FMOD import and playback checks:
+`smoke.wav` exercises PCM WAV import, and `test_meme.mp3` exercises MP3 import
+and one-shot playback.
+
+Run `newbie-test s6-sound-storage` to verify FMOD Sound registration, lookup,
+duplicate rejection, and per-instance isolation through the consuming mod's
+public API. The `S6|sound-storage|PASS` log records each result. This storage-only
+check uses placeholder handles and does not call FMOD or release a sound.
+
+Run `newbie-test s7-sound-import` to verify MP3 and PCM WAV success, missing
+file and path-escape failures, callback cardinality, and worker-thread callbacks.
+Run `newbie-test s8-sound-playback` to verify main-thread handoff, storage
+registration/retrieval, and one-shot playback; confirm that the test audio is
+audible. S8 exercises low-level FMOD Sound playback, not FMOD Studio events.
 
 From the repository root, use the configured `blasphemous-modding-test` CLI:
 
