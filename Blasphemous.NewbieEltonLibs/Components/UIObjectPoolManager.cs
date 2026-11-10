@@ -230,7 +230,7 @@ public sealed class UIObjectPoolManager : MonoBehaviour
     /// <exception cref="ArgumentNullException"><paramref name="gameObject"/> is <see langword="null"/>.</exception>
     public sealed class ObjectInstance(GameObject gameObject)
     {
-        private readonly Transform _transform = gameObject.transform;
+        private readonly Transform _transform = (gameObject ?? throw new ArgumentNullException(nameof(gameObject))).transform;
         private readonly PoolObject[] _poolObjectScripts = gameObject.GetComponent<PoolObject>() == null
                 ? []
                 : gameObject.GetComponents<PoolObject>();
@@ -238,7 +238,7 @@ public sealed class UIObjectPoolManager : MonoBehaviour
         /// <summary>
         /// Gets the game object represented by this wrapper.
         /// </summary>
-        public GameObject GameObject { get; } = gameObject ?? throw new ArgumentNullException(nameof(gameObject));
+        public GameObject GameObject { get; } = gameObject;
 
         /// <summary>
         /// Activates the object, updates its world transform, and notifies its pool components.
