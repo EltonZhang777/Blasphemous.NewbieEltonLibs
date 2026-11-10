@@ -36,6 +36,7 @@ jobs:
     permissions:
       contents: write
       actions: read
+      id-token: write
     runs-on: ubuntu-latest
 
     steps:
@@ -77,9 +78,15 @@ jobs:
         asset_name: ${{ github.event.repository.name }}.dll
         asset_content_type: application/octet-stream
 
+    - name: Login to NuGet.org
+      id: nuget_login
+      uses: NuGet/login@v1
+      with:
+        user: ${{ secrets.NUGET_USERNAME }}
+
     - name: Upload Nuget
       continue-on-error: true
       run: |
         for nupkg in $(find . -name "*.nupkg" -not -path "*/obj/*"); do
-          dotnet nuget push "$nupkg" -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
+          dotnet nuget push "$nupkg" -k "${{ steps.nuget_login.outputs.NUGET_API_KEY }}" -s https://api.nuget.org/v3/index.json
         done
