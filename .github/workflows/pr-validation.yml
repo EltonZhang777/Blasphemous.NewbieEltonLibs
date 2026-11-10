@@ -1,0 +1,38 @@
+name: Pull request validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore solution
+        run: dotnet restore Blasphemous.NewbieEltonLibs.sln
+
+      - name: Build solution
+        run: dotnet build Blasphemous.NewbieEltonLibs.sln --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test Blasphemous.NewbieEltonLibs.Tests/Blasphemous.NewbieEltonLibs.Tests.csproj --configuration Release --no-restore
+
+      - name: Verify whitespace formatting
+        run: dotnet format whitespace Blasphemous.NewbieEltonLibs.sln --no-restore --verify-no-changes
+
+      - name: Verify warning-level style formatting
+        run: dotnet format style Blasphemous.NewbieEltonLibs.sln --no-restore --severity warn --verify-no-changes
