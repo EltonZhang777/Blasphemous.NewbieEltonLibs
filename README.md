@@ -26,7 +26,8 @@ The library targets .NET Framework 3.5. All five packages below are hard compile
 
 - **CheatConsole commands and logging** — `CheatConsoleLogging` and `LogLevel` provide opt-in console input/output logging; `AutoModCommand` and `ModSubCommandAttribute` provide attribute-based mod command registration.
 - **Mod-owned flags** — `ModFlagsManager` provides owner-scoped boolean flags backed by the vanilla event system.
-- **Runtime resource storage** — `SpriteStorage`, `AnimationStorage`, `FMODSoundStorage`, `SpriteImportInfo`, `AnimationInfo`, and `AnimationImportInfo` organize per-mod sprite, animation, and audio resources plus import metadata.
+- **Runtime resource storage** — `SpriteStorage` and `AnimationStorage` organize per-mod sprite and animation resources; `SpriteImportInfo`, `AnimationInfo`, and `AnimationImportInfo` describe import metadata.
+- **FMOD audio** — `FMODSoundImporter` asynchronously imports audio files and delivers an `FMODSoundImportResult`; consuming mods store imported sounds in their per-mod `FMODSoundStorage` and use `FMODSoundPlayer` for one-shot playback.
 - **Components** — `ModAnimator` displays stored animation data, `ItemCollection<T>` collects matching public fields as items, and `UIObjectPoolManager` reuses UI objects scoped to a canvas, consuming mod, and prefab.
 - **Serialization** — `SerializableVector3`, `UnityEngineIgnoreConverter`, and `JsonSerializerSettingsFactory` provide Unity-value and JSON serialization helpers.
 - **ModdingAPI extensions** — `ConfigHandlerExtensions`, `FileHandlerExtensions`, `InputHandlerExtensions`, `LocalizationHandlerExtensions`, `ModCommandExtensions`, and `ModLogExtensions` cover configuration, files/JSON, input, localization, commands, and logging.
