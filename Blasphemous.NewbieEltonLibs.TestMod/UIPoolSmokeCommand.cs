@@ -49,6 +49,9 @@ internal sealed class UIPoolSmokeCommand : AutoModCommand
             Vector3 secondPosition = new(-8f, 19f, 0f);
             Quaternion secondRotation = Quaternion.Euler(0f, 0f, 75f);
 
+            bool wrapperRejectsNull = VerifyWrapperRejectsNull();
+            Report("wrapper-rejects-null", wrapperRejectsNull, "expected=ArgumentNullException");
+
             bool wrapperPreservesActivation = VerifyWrapperPreservesActivation();
             Report("wrapper-preserves-active", wrapperPreservesActivation,
                 $"activeAfterWrapping={wrapperPreservesActivation}");
@@ -230,6 +233,19 @@ internal sealed class UIPoolSmokeCommand : AutoModCommand
         bool activePreserved = callerOwned.activeSelf == activeBefore;
         UnityEngine.Object.Destroy(callerOwned);
         return activePreserved;
+    }
+
+    private static bool VerifyWrapperRejectsNull()
+    {
+        try
+        {
+            _ = new UIObjectPoolManager.ObjectInstance(null!);
+            return false;
+        }
+        catch (ArgumentNullException)
+        {
+            return true;
+        }
     }
 
     private GameObject GetCapacityPrefab()
