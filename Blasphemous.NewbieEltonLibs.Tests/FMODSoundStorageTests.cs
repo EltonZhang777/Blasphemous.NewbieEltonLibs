@@ -1,7 +1,7 @@
-using System;
-using System.Collections.Generic;
 using Blasphemous.NewbieEltonLibs.Storage;
 using FMOD;
+using System;
+using System.Collections.Generic;
 using Xunit;
 
 namespace Blasphemous.NewbieEltonLibs.Tests;
