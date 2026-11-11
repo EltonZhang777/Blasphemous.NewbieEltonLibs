@@ -19,6 +19,9 @@ Whether the assembly that invoked a logging configuration method was built with 
 A mod-owned collection of named runtime resources. It does not own resource creation or destruction.
 _Avoid_: global registry, importer
 
+**UI object pool**:
+A consuming mod's collection of reusable UI objects created from a prefab. Pool instances are not shared across mods, even when the mods use the same prefab.
+
 **Sprite**:
 A Unity 2D visual resource identified by a name chosen by the consuming mod.
 

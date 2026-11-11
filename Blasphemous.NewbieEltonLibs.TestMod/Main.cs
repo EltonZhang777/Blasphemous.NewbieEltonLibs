@@ -13,7 +13,7 @@ internal sealed class Main : BaseUnityPlugin
     {
         try
         {
-            _mod = new NewbieEltonLibsTestMod();
+            _mod = new NewbieEltonLibsTestMod(this);
             Logger.LogInfo($"[{ModInfo.ModId}] STARTUP_READY");
         }
         catch (Exception exception)

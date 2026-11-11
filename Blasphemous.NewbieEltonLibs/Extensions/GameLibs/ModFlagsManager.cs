@@ -1,8 +1,7 @@
 using Blasphemous.ModdingAPI;
-using Blasphemous.ModdingAPI.Helpers;
+using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
 using Framework.Managers;
 using System;
-using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
@@ -56,7 +55,7 @@ public static class ModFlagsManager
 
     private static bool RegisterFlag(string localName, Type? modType, Assembly callingAssembly, bool preserveInNewGamePlus)
     {
-        if (!TryResolveMod(modType, callingAssembly, out BlasMod? mod) || mod == null)
+        if (!ModIdentityResolver.TryResolveMod(modType, callingAssembly, out BlasMod? mod) || mod == null)
             return false;
 
         if (_registry.TryRegister(mod.GetType(), mod.Id, localName, preserveInNewGamePlus, out _))
@@ -94,7 +93,7 @@ public static class ModFlagsManager
     private static bool TryGetFlag(string localName, Type? modType, Assembly callingAssembly, out bool value)
     {
         value = false;
-        if (!TryResolveMod(modType, callingAssembly, out BlasMod? mod) || mod == null)
+        if (!ModIdentityResolver.TryResolveMod(modType, callingAssembly, out BlasMod? mod) || mod == null)
             return false;
 
         if (!_registry.TryGet(mod.GetType(), mod.Id, localName, out ModFlagInfo? registration) || registration == null)
@@ -146,7 +145,7 @@ public static class ModFlagsManager
 
     private static bool TrySetFlag(string localName, Type? modType, Assembly callingAssembly, bool value)
     {
-        if (!TryResolveMod(modType, callingAssembly, out BlasMod? mod) || mod == null)
+        if (!ModIdentityResolver.TryResolveMod(modType, callingAssembly, out BlasMod? mod) || mod == null)
             return false;
 
         if (!_registry.TryGet(mod.GetType(), mod.Id, localName, out ModFlagInfo? registration) || registration == null)
@@ -191,63 +190,4 @@ public static class ModFlagsManager
         return false;
     }
 
-    private static bool TryResolveMod(Type? modType, Assembly callingAssembly, out BlasMod? mod)
-    {
-        mod = null;
-        if (modType != null && (!typeof(BlasMod).IsAssignableFrom(modType) || modType.IsAbstract))
-        {
-            ModLog.Error($"Cannot resolve mod-owned flag identity from invalid mod type '{modType}'.");
-            return false;
-        }
-
-        IEnumerable<BlasMod>? loadedMods;
-        try
-        {
-            loadedMods = ModHelper.LoadedMods;
-        }
-        catch (Exception exception)
-        {
-            ModLog.Error($"Failed to resolve mod-owned flag identity: {exception.Message}");
-            return false;
-        }
-
-        if (loadedMods == null)
-        {
-            ModLog.Error("Cannot resolve mod-owned flag identity because no loaded mod list is available.");
-            return false;
-        }
-
-        BlasMod? match = null;
-        int matchCount = 0;
-        try
-        {
-            foreach (BlasMod candidate in loadedMods)
-            {
-                if (candidate == null)
-                    continue;
-
-                Type candidateType = candidate.GetType();
-                if (modType != null ? candidateType != modType : candidateType.Assembly != callingAssembly)
-                    continue;
-
-                match = candidate;
-                matchCount++;
-            }
-        }
-        catch (Exception exception)
-        {
-            ModLog.Error($"Failed to resolve mod-owned flag identity for '{modType}': {exception.Message}");
-            return false;
-        }
-
-        if (matchCount != 1 || match == null)
-        {
-            string identity = modType == null ? $"calling assembly '{callingAssembly.FullName}'" : $"mod type '{modType}'";
-            ModLog.Error($"Cannot resolve mod-owned flag identity for {identity}: expected one loaded mod, found {matchCount}.");
-            return false;
-        }
-
-        mod = match;
-        return true;
-    }
 }

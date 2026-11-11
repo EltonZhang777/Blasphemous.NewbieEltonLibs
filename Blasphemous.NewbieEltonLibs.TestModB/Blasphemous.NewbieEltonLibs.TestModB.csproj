@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net35</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+
+    <Title>Newbie Elton Libraries UI Pool Consumer B</Title>
+    <Product>Newbie Elton Libraries UI Pool Consumer B</Product>
+    <Authors>NewbieElton</Authors>
+    <Company>NewbieElton</Company>
+    <Description>Second external consumer for UI pool isolation verification.</Description>
+    <Version>0.3.0</Version>
+
+    <AssemblyName>NewbieEltonLibsTestModB</AssemblyName>
+    <TargetName>NewbieEltonLibsTestModB</TargetName>
+    <RootNamespace>Blasphemous.NewbieEltonLibs.TestModB</RootNamespace>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+
+    <PackageRoot>$(MSBuildProjectDirectory)\..\publish\NewbieEltonLibsTestMod</PackageRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Blasphemous.NewbieEltonLibs.TestMod\Blasphemous.NewbieEltonLibs.TestMod.csproj">
+      <AdditionalProperties>Configuration=$(Configuration)</AdditionalProperties>
+    </ProjectReference>
+    <PackageReference Include="Blasphemous.GameLibs" Version="4.0.67" />
+    <PackageReference Include="Blasphemous.Framework.UI" Version="0.2.0" />
+    <PackageReference Include="Blasphemous.ModdingAPI" Version="3.0.1" />
+    <PackageReference Include="Blasphemous.CheatConsole" Version="1.1.0" />
+  </ItemGroup>
+
+  <Target Name="PackageTestModB" AfterTargets="Build">
+    <MakeDir Directories="$(PackageRoot)\plugins" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PackageRoot)\plugins" />
+  </Target>
+
+</Project>
