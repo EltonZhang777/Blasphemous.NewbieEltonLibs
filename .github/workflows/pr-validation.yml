@@ -17,6 +17,9 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Match repository line endings
+        run: git -c core.autocrlf=true checkout --force HEAD -- .
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
