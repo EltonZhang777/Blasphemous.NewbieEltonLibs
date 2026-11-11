@@ -10,7 +10,7 @@
     <Authors>NewbieElton</Authors>
     <Company>NewbieElton</Company>
     <Description>Second external consumer for UI pool isolation verification.</Description>
-    <Version>0.3.0</Version>
+    <Version>0.4.0</Version>
 
     <AssemblyName>NewbieEltonLibsTestModB</AssemblyName>
     <TargetName>NewbieEltonLibsTestModB</TargetName>

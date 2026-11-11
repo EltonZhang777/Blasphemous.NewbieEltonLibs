@@ -9,7 +9,7 @@ This project is a prerequisite class library, not a standalone BepInEx mod. It d
 Reference the NuGet package (published to nuget.org) in your mod project:
 
 ```xml
-<PackageReference Include="Blasphemous.NewbieEltonLibs" Version="0.3.0" />
+<PackageReference Include="Blasphemous.NewbieEltonLibs" Version="0.4.0" />
 ```
 
 The library targets .NET Framework 3.5. All five packages below are hard compile-time references. At runtime, the selected game profile supplies the framework and game assemblies. `Blasphemous.ModdingAPI` and `Blasphemous.GameLibs` are baseline dependencies, while `Blasphemous.CheatConsole`, `Blasphemous.Framework.Levels`, and `Blasphemous.Framework.UI` are feature-gated runtime soft dependencies required when the consuming mod executes APIs that reference those packages.
