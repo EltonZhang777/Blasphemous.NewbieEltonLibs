@@ -1,0 +1,63 @@
+name: Pull request validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Normalize tracked C# line endings for EditorConfig
+        run: |
+          python3 - <<'PY'
+          import subprocess
+          from pathlib import Path
+
+          paths = subprocess.check_output(
+              ["git", "ls-files", "-z", "--", "*.cs"]
+          ).split(b"\0")
+
+          for name in filter(None, paths):
+              path = Path(name.decode("utf-8"))
+              source = path.read_bytes()
+              had_final_newline = source.endswith(b"\n")
+              normalized = source.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+
+              if normalized.endswith(b"\r\n") != had_final_newline:
+                  raise SystemExit(f"EOF state changed: {path}")
+              remaining = normalized.replace(b"\r\n", b"")
+              if b"\r" in remaining or b"\n" in remaining:
+                  raise SystemExit(f"Non-CRLF line ending remains: {path}")
+
+              path.write_bytes(normalized)
+          PY
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore solution
+        run: dotnet restore Blasphemous.NewbieEltonLibs.sln
+
+      - name: Build solution
+        run: dotnet build Blasphemous.NewbieEltonLibs.sln --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test Blasphemous.NewbieEltonLibs.Tests/Blasphemous.NewbieEltonLibs.Tests.csproj --configuration Release --no-restore
+
+      - name: Verify whitespace formatting
+        run: dotnet format whitespace Blasphemous.NewbieEltonLibs.sln --no-restore --verify-no-changes
+
+      - name: Verify warning-level style formatting
+        run: dotnet format style Blasphemous.NewbieEltonLibs.sln --no-restore --severity warn --verify-no-changes

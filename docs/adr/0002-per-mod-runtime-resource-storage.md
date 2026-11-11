@@ -4,7 +4,7 @@ status: accepted
 
 # Use per-mod runtime resource registries
 
-The reusable storage API will use per-mod instances. Consuming mods create, register, and replace their own Sprite and Animation resources; storage does not read `sprites.json` or `animations.json`, does not depend on `FileHandler` for automatic importing, and does not destroy Unity resources. This keeps resource creation and lifecycle ownership with the mod that created the resource and avoids a process-wide name collision domain.
+The reusable storage API will use per-mod instances. Consuming mods create, register, and replace their own Sprite, Animation, and FMOD Sound resources; storage does not read `sprites.json` or `animations.json`, does not depend on `FileHandler` for automatic importing, and does not destroy Unity resources or release FMOD Sounds. This keeps resource creation and lifecycle ownership with the mod that created the resource and avoids a process-wide name collision domain.
 
 To preserve the requested `SpriteImportInfo` API, the library will use the `Blasphemous.Framework.Levels` vector type rather than introduce a duplicate vector type.
 

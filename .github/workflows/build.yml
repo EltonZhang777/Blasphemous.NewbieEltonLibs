@@ -12,10 +12,10 @@ jobs:
 
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v6
       with:
         dotnet-version: 8.0.x
 
@@ -36,14 +36,15 @@ jobs:
     permissions:
       contents: write
       actions: read
+      id-token: write
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v6
       with:
         dotnet-version: 8.0.x
 
@@ -58,28 +59,19 @@ jobs:
         echo "VERSION=$VERSION" >> $GITHUB_ENV
 
     - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: v${{ env.VERSION }}
-        draft: true
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: gh release create "$GITHUB_REF_NAME" "publish/${{ github.event.repository.name }}.dll#${{ github.event.repository.name }}.dll" --title "v$VERSION" --draft
 
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Login to NuGet.org
+      id: nuget_login
+      uses: NuGet/login@v1
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: publish/${{ github.event.repository.name }}.dll
-        asset_name: ${{ github.event.repository.name }}.dll
-        asset_content_type: application/octet-stream
+        user: ${{ secrets.NUGET_USERNAME }}
 
     - name: Upload Nuget
       continue-on-error: true
       run: |
         for nupkg in $(find . -name "*.nupkg" -not -path "*/obj/*"); do
-          dotnet nuget push "$nupkg" -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
+          dotnet nuget push "$nupkg" -k "${{ steps.nuget_login.outputs.NUGET_API_KEY }}" -s https://api.nuget.org/v3/index.json
         done
